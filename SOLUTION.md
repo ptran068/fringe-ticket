@@ -42,7 +42,7 @@ Direct `INSERT` on `holds` / `bookings` is revoked for `anon` and `authenticated
 
 Expired holds with `status = 'active'` are excluded by `expires_at > now()`. No cron required for correctness.
 
-Sold-out: `sold >= capacity`. Temporarily unavailable: remaining seats are in other baskets. Badge copy is different. Catalogue cards still link through (the card is navigation); the show-page selector is where both states refuse a hold, with different reasons. A full house of *other people's baskets* is not sold out.
+Sold-out: `sold >= capacity`. Temporarily unavailable: remaining seats are in other baskets. Badge copy is different. Catalogue cards still link through (the card is navigation); the show-page selector is where both states refuse a hold, with different reasons. A full house of _other people's baskets_ is not sold out.
 
 ## Money
 
@@ -91,14 +91,14 @@ The QR is a URL because phone cameras only open a page when the value is a URL. 
 
 ## What was cut (on purpose)
 
-| Cut                   | Why                                                                   |
-| --------------------- | --------------------------------------------------------------------- |
-| Waitlist              | Nice-to-have; core inventory was not done until RLS + races were real |
-| Optimistic hold UI    | Rollback path is easy to fake; the RPC is the product                 |
+| Cut                   | Why                                                                                                                                 |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Waitlist              | Nice-to-have; core inventory was not done until RLS + races were real                                                               |
+| Optimistic hold UI    | Rollback path is easy to fake; the RPC is the product                                                                               |
 | Hosted deploy         | Local `supabase start` is what the brief asks to review. `Dockerfile` + `output: 'standalone'` exist as packaging, not a public URL |
-| Playwright            | Vitest against live RPCs pins the concurrent path cheaper             |
-| Real email / payments | Out of scope                                                          |
-| Account-backed wallet | Device-local is enough to show a QR at the door in a demo. A logged-in customer list would be a second auth model |
+| Playwright            | Vitest against live RPCs pins the concurrent path cheaper                                                                           |
+| Real email / payments | Out of scope                                                                                                                        |
+| Account-backed wallet | Device-local is enough to show a QR at the door in a demo. A logged-in customer list would be a second auth model                   |
 
 ## What I would do next
 

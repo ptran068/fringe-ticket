@@ -11,6 +11,18 @@ import type {
 } from '@/types/domain';
 
 const PAGE_SIZE = 10;
+const QUERY_MAX_LENGTH = 80;
+const LIST_FETCH_SIZE = 1000;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function catalogueQuery(value: string | undefined): string | null {
+  const q = value?.trim().slice(0, QUERY_MAX_LENGTH);
+  return q ? q : null;
+}
+
+function catalogueVenueId(value: string | undefined): string | null {
+  return value && UUID_RE.test(value) ? value : null;
+}
 
 interface ListShowsRpc {
   data: ShowWithAvailability[];
@@ -20,6 +32,35 @@ interface ListShowsRpc {
   total_pages: number;
 }
 
+function applyNameVenueFilters(
+  rows: ShowWithAvailability[],
+  q: string | null,
+  venueId: string | null,
+): ShowWithAvailability[] {
+  const needle = q?.toLowerCase();
+  return rows.filter((show) => {
+    if (needle && !show.title.toLowerCase().includes(needle)) return false;
+    if (venueId && show.venue_id !== venueId) return false;
+    return true;
+  });
+}
+
+function toPage(
+  rows: ShowWithAvailability[],
+  page: number,
+  pageSize: number,
+): PaginatedResult<ShowWithAvailability> {
+  const total = rows.length;
+  const start = (page - 1) * pageSize;
+  return {
+    data: rows.slice(start, start + pageSize),
+    total,
+    page,
+    pageSize,
+    totalPages: total === 0 ? 0 : Math.ceil(total / pageSize),
+  };
+}
+
 /** Public catalogue. Uses the anon key so RLS is the public-read policy. */
 export async function getShows(
   filters: ShowFilters = {},
@@ -27,24 +68,33 @@ export async function getShows(
   const supabase = createAnonClient();
   const page = filters.page ?? 1;
   const pageSize = filters.pageSize ?? PAGE_SIZE;
+  const q = catalogueQuery(filters.q);
+  const venueId = catalogueVenueId(filters.venue);
 
-  const { data, error } = await supabase.rpc('list_shows', {
-    p_city: filters.city && filters.city !== 'all' ? filters.city : null,
+  const rpcArgs = {
+    p_city: !venueId && filters.city && filters.city !== 'all' ? filters.city : null,
     p_availability:
       filters.availability && filters.availability !== 'all' ? filters.availability : null,
     p_sort: filters.sort ?? 'starts_at',
-    p_page: page,
-    p_page_size: pageSize,
-  });
+    p_page: q || venueId ? 1 : page,
+    p_page_size: q || venueId ? LIST_FETCH_SIZE : pageSize,
+  };
+
+  const { data, error } = await supabase.rpc('list_shows', rpcArgs);
 
   if (error) {
     throw new Error(`Failed to fetch shows: ${error.message}`);
   }
 
   const result = data as ListShowsRpc;
+  const rows = result.data ?? [];
+
+  if (q || venueId) {
+    return toPage(applyNameVenueFilters(rows, q, venueId), page, pageSize);
+  }
 
   return {
-    data: result.data ?? [],
+    data: rows,
     total: result.total,
     page: result.page,
     pageSize: result.page_size,

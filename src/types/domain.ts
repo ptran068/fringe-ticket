@@ -162,7 +162,9 @@ export interface PaginatedResult<T> {
 
 /** Show filter params */
 export interface ShowFilters {
+  q?: string;
   city?: string;
+  venue?: string;
   availability?: AvailabilityStatus | 'all';
   sort?: 'starts_at' | 'price_asc' | 'price_desc';
   page?: number;

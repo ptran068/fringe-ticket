@@ -16,11 +16,11 @@ This Next.js has breaking APIs versus training data. Read `node_modules/next/dis
 
 ### Clients — pick the right one
 
-| Client | File | Use for |
-| ------ | ---- | ------- |
-| Anon (no cookies) | `src/lib/supabase/anon.ts` | Public catalogue, holds, checkout/booking by UUID |
-| Cookie | `src/lib/supabase/server.ts` | Organiser reads/writes so RLS sees `auth.uid()` |
-| Service role | `src/lib/supabase/admin.ts` | **Do not import in app routes.** Tests and `scripts/integrity-guard.ts` build their own. |
+| Client            | File                         | Use for                                                                                  |
+| ----------------- | ---------------------------- | ---------------------------------------------------------------------------------------- |
+| Anon (no cookies) | `src/lib/supabase/anon.ts`   | Public catalogue, holds, checkout/booking by UUID                                        |
+| Cookie            | `src/lib/supabase/server.ts` | Organiser reads/writes so RLS sees `auth.uid()`                                          |
+| Service role      | `src/lib/supabase/admin.ts`  | **Do not import in app routes.** Tests and `scripts/integrity-guard.ts` build their own. |
 
 Public pages must use the anon client **without** the organiser JWT. A logged-in organiser's cookie client only passes RLS for their own shows, so `/` would otherwise hide the rest of the festival.
 
@@ -62,7 +62,7 @@ npm run integrity    # Oversell, expiry, timezone, RLS
 - `createShow` sets `organiser_id` from `user.id`. Never take it from the form.
 - Organiser dashboard queries are **unfiltered**. RLS is the gate; do not add a repository `.eq('organiser_id', me)` and call that security.
 - Checkout/confirmation: UUID in the URL is the capability (`get_hold_public` / `get_booking_public`). Do not grant table SELECT on holds/bookings to anon.
-- `list_shows` filters by city/availability **before** `LIMIT`. Totals are the filtered population.
+- `list_shows` filters by city/availability **before** `LIMIT`. Totals are the filtered population. Catalogue name and venue filters are applied on that result set.
 
 ## Money Rules
 

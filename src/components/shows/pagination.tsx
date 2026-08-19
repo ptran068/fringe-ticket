@@ -22,7 +22,7 @@ export function Pagination({ page, totalPages, total }: PaginationProps) {
     } else {
       params.set('page', String(p));
     }
-    router.push(`/?${params.toString()}`);
+    router.push(`/?${params.toString()}`, { scroll: false });
   };
 
   return (
