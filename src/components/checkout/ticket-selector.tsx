@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { Alert } from '@/components/ui/alert';
 import { formatPrice, tierPrice, calculateOrder } from '@/domain/pricing';
 import { createHold } from '@/server/actions/holds';
 import type { Show, ShowAvailability, TicketTier } from '@/types/domain';
@@ -67,9 +68,10 @@ export function TicketSelector({ show, availability, tiers }: TicketSelectorProp
 
   if (isDisabled) {
     return (
-      <div className="bg-white rounded-xl border border-charcoal/5 p-6 shadow-card">
-        <h3 className="font-semibold text-charcoal mb-2">Tickets</h3>
-        <p className="text-sm text-slate">
+      <div className="rounded-2xl border border-charcoal/8 bg-white p-6 shadow-card">
+        <p className="kicker mb-2">Tickets</p>
+        <h3 className="font-display text-xl font-bold text-charcoal">Unavailable</h3>
+        <p className="mt-2 text-sm leading-relaxed text-slate">
           {availability.status === 'sold_out'
             ? 'This show is sold out.'
             : 'All tickets are temporarily held. Try again shortly.'}
@@ -79,37 +81,48 @@ export function TicketSelector({ show, availability, tiers }: TicketSelectorProp
   }
 
   return (
-    <div className="bg-white rounded-xl border border-charcoal/5 p-6 shadow-card space-y-5">
-      <h3 className="font-semibold text-charcoal">Select Tickets</h3>
+    <div className="space-y-5 rounded-2xl border border-charcoal/8 bg-white p-6 shadow-card">
+      <div>
+        <p className="kicker mb-1">Tickets</p>
+        <h3 className="font-display text-xl font-bold text-charcoal">Select your seats</h3>
+        <p className="mt-1 text-sm text-slate">
+          {availability.available} {availability.available === 1 ? 'ticket' : 'tickets'} remaining
+        </p>
+      </div>
 
-      {/* Tier selectors */}
-      <div className="space-y-4">
+      <div className="space-y-3">
         {tiers.map((tier) => {
           const unitPrice = tierPrice(show.base_price_minor, tier.percentage);
           const qty = selections[tier.id] ?? 0;
+          const selected = qty > 0;
 
           return (
-            <div key={tier.id} className="flex items-center justify-between">
+            <div
+              key={tier.id}
+              className={`flex items-center justify-between rounded-xl border px-3.5 py-3 transition-colors ${
+                selected ? 'border-amber/40 bg-amber/8' : 'border-charcoal/8 bg-ghost/60'
+              }`}
+            >
               <div>
-                <p className="text-sm font-medium text-charcoal">{tier.label}</p>
-                <p className="text-xs text-slate">{formatPrice(unitPrice)}</p>
+                <p className="text-sm font-semibold text-charcoal">{tier.label}</p>
+                <p className="text-xs tabular-nums text-slate">{formatPrice(unitPrice)}</p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5">
                 <button
                   type="button"
                   onClick={() => updateQuantity(tier.id, -1)}
                   disabled={qty <= 0}
-                  className="w-8 h-8 rounded-full border border-charcoal/10 text-charcoal flex items-center justify-center hover:bg-cream-dark disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-charcoal/10 bg-white text-lg text-charcoal transition-colors hover:bg-cream-dark disabled:cursor-not-allowed disabled:opacity-30 cursor-pointer"
                   aria-label={`Decrease ${tier.label} quantity`}
                 >
                   −
                 </button>
-                <span className="w-6 text-center font-semibold tabular-nums text-sm">{qty}</span>
+                <span className="w-6 text-center text-sm font-semibold tabular-nums">{qty}</span>
                 <button
                   type="button"
                   onClick={() => updateQuantity(tier.id, 1)}
                   disabled={totalQty >= availability.available}
-                  className="w-8 h-8 rounded-full border border-charcoal/10 text-charcoal flex items-center justify-center hover:bg-cream-dark disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-charcoal/10 bg-white text-lg text-charcoal transition-colors hover:bg-cream-dark disabled:cursor-not-allowed disabled:opacity-30 cursor-pointer"
                   aria-label={`Increase ${tier.label} quantity`}
                 >
                   +
@@ -120,41 +133,35 @@ export function TicketSelector({ show, availability, tiers }: TicketSelectorProp
         })}
       </div>
 
-      {/* Order summary */}
       {totalQty > 0 && (
-        <div className="border-t border-charcoal/5 pt-4 space-y-2 animate-fade-in">
+        <div className="space-y-2 border-t border-dashed border-charcoal/10 pt-4 animate-fade-in">
           {order.lineItems.map((item) => (
             <div key={item.tierId} className="flex justify-between text-sm">
               <span className="text-slate">
                 {item.quantity} × {item.tierLabel}
               </span>
-              <span className="text-charcoal font-medium">{formatPrice(item.lineTotalMinor)}</span>
+              <span className="font-medium tabular-nums text-charcoal">
+                {formatPrice(item.lineTotalMinor)}
+              </span>
             </div>
           ))}
 
           <div className="flex justify-between text-sm">
             <span className="text-slate">Booking fee</span>
-            <span className="text-charcoal font-medium">{formatPrice(order.feeMinor)}</span>
+            <span className="font-medium tabular-nums text-charcoal">
+              {formatPrice(order.feeMinor)}
+            </span>
           </div>
 
-          <div className="flex justify-between text-base font-bold border-t border-charcoal/5 pt-2 mt-2">
+          <div className="mt-2 flex justify-between border-t border-charcoal/8 pt-2 text-base font-bold">
             <span>Total</span>
-            <span>{formatPrice(order.totalMinor)}</span>
+            <span className="tabular-nums">{formatPrice(order.totalMinor)}</span>
           </div>
         </div>
       )}
 
-      {/* Error */}
-      {error && (
-        <div
-          className="bg-coral/10 border border-coral/20 rounded-lg p-3 text-sm text-coral animate-fade-in"
-          role="alert"
-        >
-          {error}
-        </div>
-      )}
+      {error && <Alert>{error}</Alert>}
 
-      {/* CTA */}
       <Button
         size="lg"
         className="w-full"
@@ -162,11 +169,11 @@ export function TicketSelector({ show, availability, tiers }: TicketSelectorProp
         loading={isPending}
         onClick={handleHold}
       >
-        {isPending ? 'Reserving...' : 'Hold tickets'}
+        {isPending ? 'Reserving...' : totalQty === 0 ? 'Select tickets' : 'Hold tickets'}
       </Button>
 
-      <p className="text-xs text-slate text-center">
-        Tickets are held for 10 minutes. No payment required to hold.
+      <p className="text-center text-xs leading-relaxed text-slate">
+        Held for 10 minutes. No payment required to hold.
       </p>
     </div>
   );

@@ -1,7 +1,10 @@
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { getVenues } from '@/server/repositories/shows';
 import { ShowForm } from '@/components/organiser/show-form';
+import { PageHeader } from '@/components/ui/page-header';
+import { IconChevronLeft } from '@/components/ui/icons';
 
 export default async function NewShowPage() {
   const supabase = await createClient();
@@ -13,11 +16,19 @@ export default async function NewShowPage() {
   const venues = await getVenues();
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-      <h1 className="font-[family-name:var(--font-display)] text-3xl font-bold text-charcoal mb-2">
-        New show
-      </h1>
-      <p className="text-slate mb-8">Times are saved in the venue&apos;s timezone, not yours.</p>
+    <div className="page-wrap py-8 sm:py-12">
+      <Link
+        href="/organiser"
+        className="mb-6 inline-flex items-center gap-1 text-sm text-slate transition-colors hover:text-charcoal"
+      >
+        <IconChevronLeft className="h-4 w-4" />
+        Back to dashboard
+      </Link>
+      <PageHeader
+        kicker="New listing"
+        title="Create a show"
+        description="Times are saved in the venue's timezone, not yours."
+      />
       <ShowForm venues={venues} />
     </div>
   );

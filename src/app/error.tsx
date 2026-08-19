@@ -10,7 +10,7 @@ export default function ErrorPage({
   retry: () => void;
 }) {
   return (
-    <div className="max-w-6xl mx-auto px-4 py-16">
+    <div className="page-wrap py-16">
       <ErrorState
         title="Something went wrong"
         description={

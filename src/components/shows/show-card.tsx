@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import type { ShowWithAvailability } from '@/types/domain';
 import { formatPrice } from '@/domain/pricing';
-import { relativeShowDay, formatShowTimeOnly } from '@/domain/time';
+import { relativeShowDay, formatShowTimeOnly, showDateParts } from '@/domain/time';
 import { AvailabilityBadge } from '@/components/ui/availability-badge';
-import { Button } from '@/components/ui/button';
+import { IconPin } from '@/components/ui/icons';
+import { showPosterTone } from '@/lib/show-art';
 
 interface ShowCardProps {
   show: ShowWithAvailability;
@@ -12,91 +13,78 @@ interface ShowCardProps {
 export function ShowCard({ show }: ShowCardProps) {
   const venue = show.venues;
   const isSoldOut = show.availability.status === 'sold_out';
+  const parts = showDateParts(show.starts_at, venue.timezone);
+  const relative = relativeShowDay(show.starts_at, venue.timezone);
 
   return (
-    <article
-      className={`
-        group bg-white rounded-xl border border-charcoal/5 overflow-hidden
-        shadow-card hover:shadow-card-hover transition-all duration-300
-        ${isSoldOut ? 'opacity-70' : ''}
-      `}
-    >
-      <div className="p-6 flex flex-col h-full">
-        {/* Title */}
-        <h3 className="font-[family-name:var(--font-display)] text-xl font-bold text-charcoal leading-tight mb-2 group-hover:text-amber-dark transition-colors">
-          {show.title}
-        </h3>
-
-        {/* Venue & City */}
-        <div className="flex items-center gap-1.5 text-sm text-slate mb-1">
-          <svg
-            className="w-3.5 h-3.5 shrink-0"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1.5}
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"
-            />
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"
-            />
-          </svg>
-          <span>{venue.name}</span>
-          <span className="text-charcoal/20">·</span>
-          <span>{venue.city}</span>
-        </div>
-
-        {/* Date & Time (venue timezone) */}
-        <div className="flex items-center gap-1.5 text-sm text-slate mb-4">
-          <svg
-            className="w-3.5 h-3.5 shrink-0"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1.5}
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <span>
-            {relativeShowDay(show.starts_at, venue.timezone)} ·{' '}
-            {formatShowTimeOnly(show.starts_at, venue.timezone)}
-          </span>
-        </div>
-
-        {/* Spacer */}
-        <div className="flex-1" />
-
-        {/* Footer: Price + Availability + CTA */}
-        <div className="flex items-end justify-between gap-3 pt-3 border-t border-charcoal/5">
-          <div className="space-y-1.5">
-            <p className="text-lg font-bold text-charcoal">
-              <span className="text-xs font-normal text-slate mr-0.5">From</span>
-              {formatPrice(show.price_from_minor ?? show.base_price_minor)}
-            </p>
-            <AvailabilityBadge availability={show.availability} />
+    <Link href={`/shows/${show.id}`} className="group block h-full focus-visible:outline-offset-4">
+      <article
+        className={`
+          flex h-full flex-col overflow-hidden rounded-2xl border border-charcoal/8 bg-white
+          shadow-card transition-all duration-300
+          group-hover:-translate-y-1 group-hover:shadow-card-hover
+          ${isSoldOut ? 'opacity-80' : ''}
+        `}
+      >
+        <div
+          className={`relative isolate overflow-hidden bg-gradient-to-br px-5 py-5 text-white ${showPosterTone(show.id)}`}
+        >
+          <div
+            className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-amber/20 blur-2xl"
+            aria-hidden="true"
+          />
+          <div className="relative flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[0.65rem] font-semibold tracking-[0.22em] text-white/70">
+                {parts.month}
+              </p>
+              <p className="font-display text-4xl font-bold leading-none">{parts.day}</p>
+              <p className="mt-1 text-xs font-medium uppercase tracking-wider text-white/70">
+                {parts.weekday}
+              </p>
+            </div>
+            <span className="rounded-full bg-white/15 px-2.5 py-1 text-[0.7rem] font-semibold uppercase tracking-wider text-white backdrop-blur-sm">
+              {relative}
+            </span>
           </div>
-
-          {!isSoldOut ? (
-            <Link href={`/shows/${show.id}`}>
-              <Button size="md">Get tickets</Button>
-            </Link>
-          ) : (
-            <Button size="md" disabled variant="ghost">
-              Sold out
-            </Button>
-          )}
+          <p className="relative mt-5 text-sm font-medium text-white/85">
+            {formatShowTimeOnly(show.starts_at, venue.timezone)}
+          </p>
         </div>
-      </div>
-    </article>
+
+        <div className="flex flex-1 flex-col p-5">
+          <h3 className="font-display text-xl font-bold leading-snug text-charcoal transition-colors group-hover:text-amber-dark">
+            {show.title}
+          </h3>
+          <p className="mt-2 flex items-center gap-1.5 text-sm text-slate">
+            <IconPin className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">
+              {venue.name}
+              <span className="mx-1 text-charcoal/20">·</span>
+              {venue.city}
+            </span>
+          </p>
+
+          <div className="mt-4 flex flex-1 items-end justify-between gap-3 border-t border-charcoal/6 pt-4">
+            <div className="space-y-2">
+              <p className="text-lg font-bold tabular-nums text-charcoal">
+                <span className="mr-1 text-xs font-medium uppercase tracking-wider text-slate">
+                  From
+                </span>
+                {formatPrice(show.price_from_minor ?? show.base_price_minor)}
+              </p>
+              <AvailabilityBadge availability={show.availability} />
+            </div>
+            <span
+              className={`inline-flex min-h-10 items-center rounded-xl px-3.5 text-sm font-medium transition-colors ${
+                isSoldOut ? 'bg-ghost text-slate' : 'bg-charcoal text-white group-hover:bg-ink'
+              }`}
+            >
+              {isSoldOut ? 'Sold out' : 'Get tickets'}
+            </span>
+          </div>
+        </div>
+      </article>
+    </Link>
   );
 }

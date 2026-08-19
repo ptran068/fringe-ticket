@@ -45,7 +45,7 @@ export function TicketPass({ payload, reference, svg: svgProp, size = 'lg' }: Ti
     };
   }, [enlarged]);
 
-  const frameClass = size === 'lg' ? 'w-56 sm:w-64' : 'w-40';
+  const frameClass = size === 'lg' ? 'w-52 sm:w-60' : 'w-36';
 
   return (
     <>
@@ -53,7 +53,7 @@ export function TicketPass({ payload, reference, svg: svgProp, size = 'lg' }: Ti
         <button
           type="button"
           onClick={() => setEnlarged(true)}
-          className={`${frameClass} rounded-xl border border-charcoal/10 bg-white p-3 shadow-card hover:shadow-card-hover transition-shadow cursor-pointer`}
+          className={`${frameClass} rounded-2xl border border-charcoal/10 bg-white p-3 shadow-card transition-shadow hover:shadow-card-hover cursor-pointer`}
           aria-label={`Enlarge QR code for ${reference}`}
         >
           {svg ? (
@@ -62,35 +62,32 @@ export function TicketPass({ payload, reference, svg: svgProp, size = 'lg' }: Ti
             <div className="aspect-square rounded-md bg-ghost animate-pulse" aria-hidden="true" />
           )}
         </button>
-        <p className="mt-3 font-mono text-sm font-bold tracking-wider text-amber-dark">
+        <p className="mt-3 font-mono text-sm font-bold tracking-[0.18em] text-amber-dark">
           {reference}
         </p>
-        <p className="mt-1 text-xs text-slate">Scan to open this ticket</p>
-        <Button variant="ghost" size="sm" className="mt-2" onClick={() => setEnlarged(true)}>
-          Enlarge for scanning
-        </Button>
+        <p className="mt-1 text-xs text-slate">Tap to enlarge for scanning</p>
       </div>
 
       {enlarged && svg && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/80 p-6"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/80 p-6 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
           aria-labelledby={titleId}
           onClick={() => setEnlarged(false)}
         >
           <div
-            className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-elevated"
+            className="w-full max-w-sm rounded-3xl bg-white p-6 text-center shadow-elevated"
             onClick={(event) => event.stopPropagation()}
           >
             <p
               id={titleId}
-              className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate"
+              className="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate"
             >
               Ready to scan
             </p>
             <QrCode svg={svg} label={`QR code for booking ${reference}`} className="mx-auto w-64" />
-            <p className="mt-4 font-mono text-lg font-bold tracking-wider text-amber-dark">
+            <p className="mt-4 font-mono text-lg font-bold tracking-[0.18em] text-amber-dark">
               {reference}
             </p>
             <Button variant="secondary" className="mt-6 w-full" onClick={() => setEnlarged(false)}>

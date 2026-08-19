@@ -3,19 +3,21 @@
 import { useActionState } from 'react';
 import { signIn } from '@/server/actions/auth';
 import { Button } from '@/components/ui/button';
+import { Alert } from '@/components/ui/alert';
+import { hintClassName, inputClassName, labelClassName } from '@/components/ui/field';
 import { DEMO_ORGANISER_PASSWORD, DEMO_ORGANISERS } from '@/types/domain';
 
 export function LoginForm() {
   const [state, formAction, pending] = useActionState(signIn, null);
 
   return (
-    <div className="max-w-md mx-auto">
+    <div>
       <form
         action={formAction}
-        className="bg-white rounded-xl border border-charcoal/5 p-6 shadow-card space-y-4"
+        className="space-y-4 rounded-2xl border border-charcoal/8 bg-white p-6 shadow-card"
       >
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-charcoal mb-1">
+          <label htmlFor="email" className={labelClassName}>
             Email
           </label>
           <input
@@ -23,12 +25,13 @@ export function LoginForm() {
             name="email"
             type="email"
             required
+            autoComplete="email"
             defaultValue={DEMO_ORGANISERS[0].email}
-            className="w-full border border-charcoal/10 rounded-lg px-3 py-2 text-sm"
+            className={inputClassName}
           />
         </div>
         <div>
-          <label htmlFor="password" className="block text-sm font-medium text-charcoal mb-1">
+          <label htmlFor="password" className={labelClassName}>
             Password
           </label>
           <input
@@ -36,32 +39,29 @@ export function LoginForm() {
             name="password"
             type="password"
             required
+            autoComplete="current-password"
             defaultValue={DEMO_ORGANISER_PASSWORD}
-            className="w-full border border-charcoal/10 rounded-lg px-3 py-2 text-sm"
+            className={inputClassName}
           />
         </div>
-        {state?.error && (
-          <p className="text-sm text-coral" role="alert">
-            {state.error}
-          </p>
-        )}
-        <Button type="submit" className="w-full" loading={pending}>
+        {state?.error && <Alert>{state.error}</Alert>}
+        <Button type="submit" className="w-full" size="lg" loading={pending}>
           Sign in
         </Button>
       </form>
 
-      <div className="mt-6 text-sm text-slate space-y-2">
-        <p className="font-medium text-charcoal">
-          Demo accounts (password: {DEMO_ORGANISER_PASSWORD})
-        </p>
-        <ul className="list-disc pl-5 space-y-1">
+      <div className="mt-6 rounded-2xl border border-dashed border-charcoal/12 bg-white/50 p-5">
+        <p className="text-sm font-medium text-charcoal">Demo accounts</p>
+        <p className={hintClassName}>Password: {DEMO_ORGANISER_PASSWORD}</p>
+        <ul className="mt-3 space-y-2 text-sm text-slate">
           {DEMO_ORGANISERS.map((org) => (
-            <li key={org.email}>
-              {org.name} — {org.email}
+            <li key={org.email} className="flex flex-col sm:flex-row sm:gap-2">
+              <span className="font-medium text-charcoal">{org.name}</span>
+              <span>{org.email}</span>
             </li>
           ))}
         </ul>
-        <p>
+        <p className="mt-3 text-xs leading-relaxed text-slate">
           Sign in as one organiser, then try to open the other&apos;s show IDs. Row-level security
           blocks it even if the page forgets to filter.
         </p>

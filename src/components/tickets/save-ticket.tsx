@@ -31,14 +31,14 @@ export function SaveTicket({ ticket }: SaveTicketProps) {
 
   if (failed) {
     return (
-      <p className="text-xs text-slate" role="status">
+      <p className="text-xs leading-relaxed text-slate" role="status">
         This ticket could not be saved on this device. Keep this page or the booking reference.
       </p>
     );
   }
 
   return (
-    <p className="text-xs text-slate" role="status">
+    <p className={`text-xs ${saved ? 'font-medium text-emerald' : 'text-slate'}`} role="status">
       {saved ? 'Saved to My Tickets on this device.' : 'Saving to this device…'}
     </p>
   );

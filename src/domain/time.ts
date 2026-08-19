@@ -72,6 +72,26 @@ export function relativeShowDay(startsAt: string | Date, timezone: string): stri
   }).format(date);
 }
 
+export interface ShowDateParts {
+  weekday: string;
+  day: string;
+  month: string;
+}
+
+/** Calendar parts for poster-style dates, always in the venue timezone. */
+export function showDateParts(startsAt: string | Date, timezone: string): ShowDateParts {
+  const date = typeof startsAt === 'string' ? new Date(startsAt) : startsAt;
+  return {
+    weekday: new Intl.DateTimeFormat('en-AU', { timeZone: timezone, weekday: 'short' }).format(
+      date,
+    ),
+    day: new Intl.DateTimeFormat('en-AU', { timeZone: timezone, day: 'numeric' }).format(date),
+    month: new Intl.DateTimeFormat('en-AU', { timeZone: timezone, month: 'short' })
+      .format(date)
+      .toUpperCase(),
+  };
+}
+
 /** Format a countdown from remaining milliseconds: "09:42" */
 export function formatCountdown(remainingMs: number): string {
   if (remainingMs <= 0) return '00:00';

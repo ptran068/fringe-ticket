@@ -8,9 +8,6 @@ coverage
 .env
 .env.*
 !.env.example
-Dockerfile
-.dockerignore
-nginx
 supabase
 scripts
 src/domain/__tests__

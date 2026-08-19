@@ -3,6 +3,9 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getOrganiserBookings, getOrganiserShows } from '@/server/repositories/shows';
 import { OrganiserDashboard } from '@/components/organiser/dashboard-client';
+import { Button } from '@/components/ui/button';
+import { PageHeader } from '@/components/ui/page-header';
+import { IconPlus } from '@/components/ui/icons';
 
 export default async function OrganiserPage() {
   const supabase = await createClient();
@@ -21,25 +24,20 @@ export default async function OrganiserPage() {
   const [shows, bookings] = await Promise.all([getOrganiserShows(), getOrganiserBookings()]);
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
-        <div>
-          <h1 className="font-[family-name:var(--font-display)] text-3xl font-bold text-charcoal mb-2">
-            Organiser dashboard
-          </h1>
-          <p className="text-slate">
-            Signed in as{' '}
-            <span className="font-medium text-charcoal">{organiser?.name ?? user.email}</span>. RLS
-            scopes every query to your rows.
-          </p>
-        </div>
-        <Link
-          href="/organiser/shows/new"
-          className="inline-flex items-center justify-center bg-charcoal text-white text-sm font-medium px-4 py-2.5 rounded-lg hover:bg-charcoal-light"
-        >
-          New show
-        </Link>
-      </div>
+    <div className="page-wrap py-8 sm:py-12">
+      <PageHeader
+        kicker="Backstage"
+        title="Organiser dashboard"
+        description={`Signed in as ${organiser?.name ?? user.email}. RLS scopes every query to your rows.`}
+        action={
+          <Link href="/organiser/shows/new">
+            <Button>
+              <IconPlus className="h-4 w-4" />
+              New show
+            </Button>
+          </Link>
+        }
+      />
       <OrganiserDashboard shows={shows} bookings={bookings ?? []} />
     </div>
   );

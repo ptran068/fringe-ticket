@@ -3,6 +3,8 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { Alert } from '@/components/ui/alert';
+import { hintClassName, inputClassName, labelClassName } from '@/components/ui/field';
 import { createShow, updateShow } from '@/server/actions/shows';
 import { toVenueDatetimeLocal } from '@/domain/time';
 import type { Show, Venue } from '@/types/domain';
@@ -71,10 +73,10 @@ export function ShowForm({ venues, show }: ShowFormProps) {
   return (
     <form
       action={handleSubmit}
-      className="bg-white rounded-xl border border-charcoal/5 p-6 shadow-card space-y-4 max-w-xl"
+      className="max-w-xl space-y-5 rounded-2xl border border-charcoal/8 bg-white p-6 shadow-card"
     >
       <div>
-        <label htmlFor="title" className="block text-sm font-medium text-charcoal mb-1">
+        <label htmlFor="title" className={labelClassName}>
           Title
         </label>
         <input
@@ -82,11 +84,11 @@ export function ShowForm({ venues, show }: ShowFormProps) {
           name="title"
           required
           defaultValue={show?.title}
-          className="w-full border border-charcoal/10 rounded-lg px-3 py-2 text-sm"
+          className={inputClassName}
         />
       </div>
       <div>
-        <label htmlFor="description" className="block text-sm font-medium text-charcoal mb-1">
+        <label htmlFor="description" className={labelClassName}>
           Description
         </label>
         <textarea
@@ -94,11 +96,11 @@ export function ShowForm({ venues, show }: ShowFormProps) {
           name="description"
           rows={3}
           defaultValue={show?.description ?? ''}
-          className="w-full border border-charcoal/10 rounded-lg px-3 py-2 text-sm"
+          className={`${inputClassName} resize-y`}
         />
       </div>
       <div>
-        <label htmlFor="venueId" className="block text-sm font-medium text-charcoal mb-1">
+        <label htmlFor="venueId" className={labelClassName}>
           Venue
         </label>
         <select
@@ -106,7 +108,7 @@ export function ShowForm({ venues, show }: ShowFormProps) {
           name="venueId"
           value={venueId}
           onChange={(e) => setVenueId(e.target.value)}
-          className="w-full border border-charcoal/10 rounded-lg px-3 py-2 text-sm"
+          className={inputClassName}
         >
           {venues.map((v) => (
             <option key={v.id} value={v.id}>
@@ -114,12 +116,12 @@ export function ShowForm({ venues, show }: ShowFormProps) {
             </option>
           ))}
         </select>
-        <p className="text-xs text-slate mt-1">
+        <p className={hintClassName}>
           Start time is stored in UTC and shown in {selectedVenue?.timezone}.
         </p>
       </div>
       <div>
-        <label htmlFor="startsAtLocal" className="block text-sm font-medium text-charcoal mb-1">
+        <label htmlFor="startsAtLocal" className={labelClassName}>
           Starts at (venue local)
         </label>
         <input
@@ -128,11 +130,11 @@ export function ShowForm({ venues, show }: ShowFormProps) {
           type="datetime-local"
           required
           defaultValue={defaultLocal}
-          className="w-full border border-charcoal/10 rounded-lg px-3 py-2 text-sm"
+          className={inputClassName}
         />
       </div>
       <div>
-        <label htmlFor="priceDollars" className="block text-sm font-medium text-charcoal mb-1">
+        <label htmlFor="priceDollars" className={labelClassName}>
           Base price (dollars)
         </label>
         <input
@@ -143,31 +145,22 @@ export function ShowForm({ venues, show }: ShowFormProps) {
           step="0.01"
           required
           defaultValue={show ? (show.base_price_minor / 100).toFixed(2) : '20.00'}
-          className="w-full border border-charcoal/10 rounded-lg px-3 py-2 text-sm"
+          className={inputClassName}
         />
       </div>
       {show && (
         <div>
-          <label htmlFor="status" className="block text-sm font-medium text-charcoal mb-1">
+          <label htmlFor="status" className={labelClassName}>
             Status
           </label>
-          <select
-            id="status"
-            name="status"
-            defaultValue={show.status}
-            className="w-full border border-charcoal/10 rounded-lg px-3 py-2 text-sm"
-          >
+          <select id="status" name="status" defaultValue={show.status} className={inputClassName}>
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
           </select>
         </div>
       )}
-      {error && (
-        <p className="text-sm text-coral" role="alert">
-          {error}
-        </p>
-      )}
-      <Button type="submit" loading={isPending}>
+      {error && <Alert>{error}</Alert>}
+      <Button type="submit" size="lg" loading={isPending}>
         {show ? 'Save changes' : 'Create show'}
       </Button>
     </form>

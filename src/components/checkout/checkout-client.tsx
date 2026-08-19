@@ -4,9 +4,11 @@ import { useState, useTransition, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Countdown } from '@/components/ui/countdown';
 import { Button } from '@/components/ui/button';
+import { Alert } from '@/components/ui/alert';
 import { formatPrice } from '@/domain/pricing';
 import { formatShowTime } from '@/domain/time';
 import { confirmHold } from '@/server/actions/holds';
+import { IconClock, IconPin, IconTicket } from '@/components/ui/icons';
 import Link from 'next/link';
 
 interface CheckoutClientProps {
@@ -41,13 +43,10 @@ interface CheckoutClientProps {
 
 export function CheckoutClient({ hold }: CheckoutClientProps) {
   const router = useRouter();
-  // Determine initial expiry from server-provided data (not Date.now() during render)
   const initialExpired = hold.status !== 'active';
   const [expired, setExpired] = useState(initialExpired);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-
-  // Check time-based expiry via countdown (client-side, after mount)
 
   const subtotal = hold.hold_items.reduce(
     (sum, item) => sum + item.unit_price_minor * item.quantity,
@@ -81,34 +80,21 @@ export function CheckoutClient({ hold }: CheckoutClientProps) {
     });
   };
 
-  // Expired state
   if (expired || hold.status === 'expired' || hold.status === 'confirmed') {
     return (
-      <div className="text-center py-12 animate-fade-in">
-        <div className="w-20 h-20 rounded-full bg-coral/10 flex items-center justify-center mx-auto mb-6">
-          <svg
-            className="w-10 h-10 text-coral"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1.5}
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
+      <div className="mx-auto max-w-md py-8 text-center animate-fade-in">
+        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-coral/10">
+          <IconClock className="h-10 w-10 text-coral" />
         </div>
-        <h1 className="font-[family-name:var(--font-display)] text-2xl font-bold text-charcoal mb-2">
+        <h1 className="font-display text-3xl font-bold text-charcoal">
           {hold.status === 'confirmed' ? 'Already confirmed' : 'Your hold has expired'}
         </h1>
-        <p className="text-slate mb-6">
+        <p className="mt-2 text-slate">
           {hold.status === 'confirmed'
             ? 'This hold has already been converted to a booking.'
             : 'These tickets have been returned to the pool.'}
         </p>
-        <Link href={`/shows/${show.id}`}>
+        <Link href={`/shows/${show.id}`} className="mt-6 inline-flex">
           <Button variant="secondary">Back to show</Button>
         </Link>
       </div>
@@ -117,101 +103,82 @@ export function CheckoutClient({ hold }: CheckoutClientProps) {
 
   return (
     <div className="animate-slide-up">
-      {/* Status header */}
-      <div className="text-center mb-8">
-        <div className="w-16 h-16 rounded-full bg-amber/10 flex items-center justify-center mx-auto mb-4">
-          <svg
-            className="w-8 h-8 text-amber"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1.5}
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z"
-            />
-          </svg>
+      <ol className="mb-8 flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-wider">
+        <li className="rounded-full bg-charcoal px-3 py-1 text-white">1. Reserved</li>
+        <li className="h-px w-8 bg-charcoal/15" aria-hidden="true" />
+        <li className="rounded-full bg-amber/20 px-3 py-1 text-amber-dark">2. Confirm</li>
+      </ol>
+
+      <div className="mb-8 text-center">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-amber/15 text-amber-dark">
+          <IconTicket className="h-7 w-7" />
         </div>
-        <h1 className="font-[family-name:var(--font-display)] text-2xl font-bold text-charcoal mb-1">
-          Tickets Reserved
-        </h1>
-        <p className="text-sm text-slate">Complete your booking before the timer expires.</p>
+        <h1 className="font-display text-3xl font-bold text-charcoal">Tickets reserved</h1>
+        <p className="mt-2 text-sm text-slate">Complete your booking before the timer runs out.</p>
       </div>
 
-      {/* Countdown */}
-      <div className="bg-white rounded-xl border border-charcoal/5 p-6 text-center mb-6 shadow-card">
-        <p className="text-xs uppercase tracking-wider text-slate font-medium mb-2">
+      <div className="ticket-notch mb-6 overflow-hidden rounded-2xl border border-charcoal/8 bg-white p-6 text-center shadow-card">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate">
           Time remaining
         </p>
-        <Countdown expiresAt={hold.expires_at} onExpire={handleExpire} />
+        <Countdown expiresAt={hold.expires_at} onExpire={handleExpire} className="mt-3" />
       </div>
 
-      {/* Show info */}
-      <div className="bg-white rounded-xl border border-charcoal/5 p-6 mb-6 shadow-card">
-        <h2 className="font-[family-name:var(--font-display)] text-xl font-bold text-charcoal mb-2">
-          {show.title}
-        </h2>
-        <div className="text-sm text-slate space-y-1">
-          <p>
+      <div className="mb-4 rounded-2xl border border-charcoal/8 bg-white p-6 shadow-card">
+        <h2 className="font-display text-xl font-bold text-charcoal">{show.title}</h2>
+        <div className="mt-3 space-y-2 text-sm text-slate">
+          <p className="flex items-center gap-2">
+            <IconPin className="h-4 w-4 text-slate-light" />
             {venue.name}, {venue.city}
           </p>
-          <p>{formatShowTime(show.starts_at, venue.timezone)}</p>
+          <p className="flex items-center gap-2">
+            <IconClock className="h-4 w-4 text-slate-light" />
+            {formatShowTime(show.starts_at, venue.timezone)}
+          </p>
         </div>
       </div>
 
-      {/* Order breakdown */}
-      <div className="bg-white rounded-xl border border-charcoal/5 p-6 mb-6 shadow-card">
-        <h3 className="text-sm font-semibold text-charcoal uppercase tracking-wider mb-4">
-          Order Summary
+      <div className="mb-6 rounded-2xl border border-charcoal/8 bg-white p-6 shadow-card">
+        <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate">
+          Order summary
         </h3>
 
-        <div className="space-y-3">
+        <div className="mt-4 space-y-3">
           {hold.hold_items.map((item) => (
             <div key={item.id} className="flex justify-between text-sm">
               <span className="text-slate">
                 {item.quantity} × {item.ticket_tiers.label}
               </span>
-              <span className="text-charcoal font-medium">
+              <span className="font-medium tabular-nums text-charcoal">
                 {formatPrice(item.unit_price_minor * item.quantity)}
               </span>
             </div>
           ))}
 
-          <div className="flex justify-between text-sm border-t border-charcoal/5 pt-3">
+          <div className="flex justify-between border-t border-dashed border-charcoal/10 pt-3 text-sm">
             <span className="text-slate">Subtotal</span>
-            <span className="text-charcoal font-medium">{formatPrice(subtotal)}</span>
+            <span className="font-medium tabular-nums text-charcoal">{formatPrice(subtotal)}</span>
           </div>
 
           <div className="flex justify-between text-sm">
             <span className="text-slate">Booking fee (6%, max $9)</span>
-            <span className="text-charcoal font-medium">{formatPrice(fee)}</span>
+            <span className="font-medium tabular-nums text-charcoal">{formatPrice(fee)}</span>
           </div>
 
-          <div className="flex justify-between text-lg font-bold border-t border-charcoal/5 pt-3">
+          <div className="flex justify-between border-t border-charcoal/8 pt-3 text-lg font-bold">
             <span>Total</span>
-            <span>{formatPrice(total)}</span>
+            <span className="tabular-nums">{formatPrice(total)}</span>
           </div>
         </div>
       </div>
 
-      {/* Error */}
-      {error && (
-        <div
-          className="bg-coral/10 border border-coral/20 rounded-lg p-3 text-sm text-coral mb-4 animate-fade-in"
-          role="alert"
-        >
-          {error}
-        </div>
-      )}
+      {error && <Alert className="mb-4">{error}</Alert>}
 
-      {/* Confirm */}
       <Button size="lg" className="w-full" loading={isPending} onClick={handleConfirm}>
         {isPending ? 'Confirming...' : 'Confirm booking'}
       </Button>
 
-      <p className="text-xs text-slate text-center mt-3">
+      <p className="mt-3 text-center text-xs text-slate">
         No payment is charged. This is a demonstration.
       </p>
     </div>

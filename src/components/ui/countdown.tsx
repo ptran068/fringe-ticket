@@ -20,7 +20,7 @@ export function Countdown({ expiresAt, onExpire, className = '' }: CountdownProp
   });
 
   const isExpired = remaining <= 0;
-  const isUrgent = remaining > 0 && remaining < 2 * 60 * 1000; // < 2 min
+  const isUrgent = remaining > 0 && remaining < 2 * 60 * 1000;
 
   const handleExpire = useCallback(() => {
     onExpire?.();
@@ -50,24 +50,47 @@ export function Countdown({ expiresAt, onExpire, className = '' }: CountdownProp
 
   if (isExpired) {
     return (
-      <div className={`text-coral font-semibold ${className}`} role="timer" aria-live="assertive">
+      <div className={`font-semibold text-coral ${className}`} role="timer" aria-live="assertive">
         Expired
       </div>
     );
   }
 
+  const [minutes, seconds] = formatCountdown(remaining).split(':');
+
   return (
     <div
-      className={`
-        font-mono font-bold text-2xl tabular-nums tracking-wider
-        ${isUrgent ? 'text-coral animate-pulse-slow' : 'text-amber-dark'}
-        ${className}
-      `}
+      className={className}
       role="timer"
       aria-live="polite"
       aria-label={`${formatCountdown(remaining)} remaining`}
     >
-      {formatCountdown(remaining)}
+      <div className="flex items-end justify-center gap-2">
+        <TimeBlock value={minutes} label="min" urgent={isUrgent} />
+        <span
+          className={`pb-3 font-mono text-2xl font-bold ${isUrgent ? 'text-coral' : 'text-amber-dark'}`}
+        >
+          :
+        </span>
+        <TimeBlock value={seconds} label="sec" urgent={isUrgent} />
+      </div>
+    </div>
+  );
+}
+
+function TimeBlock({ value, label, urgent }: { value: string; label: string; urgent: boolean }) {
+  return (
+    <div className="min-w-[4.5rem]">
+      <div
+        className={`rounded-xl px-3 py-2 font-mono text-3xl font-bold tabular-nums tracking-wider ${
+          urgent ? 'bg-coral/10 text-coral animate-pulse-slow' : 'bg-amber/10 text-amber-dark'
+        }`}
+      >
+        {value}
+      </div>
+      <p className="mt-1 text-[0.65rem] font-semibold uppercase tracking-wider text-slate">
+        {label}
+      </p>
     </div>
   );
 }

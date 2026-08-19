@@ -26,28 +26,31 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-      {/* Hero */}
-      <div className="mb-10">
-        <h1 className="font-[family-name:var(--font-display)] text-4xl sm:text-5xl font-bold text-charcoal leading-tight">
-          What&apos;s On
-        </h1>
-        <p className="mt-2 text-lg text-slate max-w-lg">
-          Discover independent theatre, dance, and performance across the festival.
-        </p>
-      </div>
+    <div>
+      <section className="relative overflow-hidden border-b border-charcoal/6">
+        <div className="page-wrap py-12 sm:py-16">
+          <p className="kicker mb-4">Festival 2026</p>
+          <h1 className="font-display max-w-3xl text-4xl font-bold leading-[1.1] tracking-tight text-charcoal sm:text-5xl lg:text-6xl">
+            What&apos;s On
+          </h1>
+          <p className="mt-4 max-w-xl text-lg leading-relaxed text-slate">
+            Discover independent theatre, dance, and performance. Hold seats in seconds, show your
+            QR at the door.
+          </p>
+        </div>
+      </section>
 
-      {/* Filters */}
-      <div className="mb-8">
-        <Suspense fallback={null}>
-          <ShowFilters cities={cities} />
+      <div className="page-wrap py-8 sm:py-10">
+        <div className="mb-8 rounded-2xl border border-charcoal/8 bg-white/70 p-4 shadow-card backdrop-blur-sm sm:p-5">
+          <Suspense fallback={null}>
+            <ShowFilters cities={cities} />
+          </Suspense>
+        </div>
+
+        <Suspense fallback={<ShowGridSkeleton />}>
+          <ShowGrid filters={filters} />
         </Suspense>
       </div>
-
-      {/* Show Grid */}
-      <Suspense fallback={<ShowGridSkeleton />}>
-        <ShowGrid filters={filters} />
-      </Suspense>
     </div>
   );
 }
@@ -66,9 +69,19 @@ async function ShowGrid({ filters }: { filters: ShowFiltersType }) {
 
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {result.data.map((show) => (
-          <ShowCard key={show.id} show={show} />
+      <p className="mb-5 text-sm text-slate">
+        <span className="font-semibold text-charcoal">{result.total}</span>{' '}
+        {result.total === 1 ? 'show' : 'shows'}
+      </p>
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 lg:gap-6">
+        {result.data.map((show, index) => (
+          <div
+            key={show.id}
+            className="animate-slide-up"
+            style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}
+          >
+            <ShowCard show={show} />
+          </div>
         ))}
       </div>
 

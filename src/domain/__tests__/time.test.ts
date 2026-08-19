@@ -8,6 +8,7 @@ import {
   addCalendarDay,
   fromVenueDatetimeLocal,
   toVenueDatetimeLocal,
+  showDateParts,
 } from '@/domain/time';
 
 describe('Time Module', () => {
@@ -122,6 +123,22 @@ describe('Time Module', () => {
       const iso = fromVenueDatetimeLocal('2026-01-15T20:00', 'Australia/Sydney');
       expect(iso).toBe('2026-01-15T09:00:00.000Z');
       expect(toVenueDatetimeLocal(iso, 'Australia/Sydney')).toBe('2026-01-15T20:00');
+    });
+  });
+
+  describe('showDateParts', () => {
+    it('formats the same UTC instant on different calendar days by timezone', () => {
+      const date = new Date('2026-08-15T02:00:00Z');
+      expect(showDateParts(date, 'Asia/Singapore')).toEqual({
+        weekday: 'Sat',
+        day: '15',
+        month: 'AUG',
+      });
+      expect(showDateParts(date, 'America/New_York')).toEqual({
+        weekday: 'Fri',
+        day: '14',
+        month: 'AUG',
+      });
     });
   });
 

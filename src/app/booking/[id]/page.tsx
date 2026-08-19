@@ -9,6 +9,7 @@ import { renderTicketQrSvg } from '@/lib/qr';
 import { Button } from '@/components/ui/button';
 import { SaveTicket } from '@/components/tickets/save-ticket';
 import { TicketPass } from '@/components/tickets/ticket-pass';
+import { IconCheck, IconClock, IconPin } from '@/components/ui/icons';
 
 interface BookingPageProps {
   params: Promise<{ id: string }>;
@@ -27,29 +28,21 @@ export default async function BookingPage({ params }: BookingPageProps) {
   const qrSvg = await renderTicketQrSvg(payload);
 
   return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-      <div className="text-center mb-8 animate-slide-up">
-        <div className="w-20 h-20 rounded-full bg-emerald/10 flex items-center justify-center mx-auto mb-6">
-          <svg
-            className="w-10 h-10 text-emerald"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={2}
-            stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-          </svg>
+    <div className="page-wrap max-w-2xl py-8 sm:py-12">
+      <div className="mb-8 text-center animate-slide-up">
+        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-emerald/10">
+          <IconCheck className="h-8 w-8 text-emerald" />
         </div>
-
-        <h1 className="font-[family-name:var(--font-display)] text-3xl font-bold text-charcoal mb-2">
-          Booking Confirmed
+        <p className="kicker mb-2">You&apos;re in</p>
+        <h1 className="font-display text-3xl font-bold text-charcoal sm:text-4xl">
+          Booking confirmed
         </h1>
-        <p className="text-lg font-mono font-bold text-amber-dark tracking-wider">
+        <p className="mt-2 font-mono text-lg font-bold tracking-[0.2em] text-amber-dark">
           {booking.reference}
         </p>
       </div>
 
-      <div className="bg-white rounded-xl border border-charcoal/5 p-6 mb-6 shadow-card animate-fade-in text-center">
+      <div className="ticket-notch mb-6 overflow-hidden rounded-2xl border border-charcoal/8 bg-white p-6 text-center shadow-card animate-fade-in">
         <TicketPass payload={payload} reference={booking.reference} svg={qrSvg} />
         <div className="mt-4">
           <SaveTicket
@@ -71,45 +64,49 @@ export default async function BookingPage({ params }: BookingPageProps) {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-charcoal/5 p-6 mb-6 shadow-card animate-fade-in">
-        <h2 className="font-[family-name:var(--font-display)] text-xl font-bold text-charcoal mb-3">
-          {show.title}
-        </h2>
-        <div className="text-sm text-slate space-y-1">
-          <p>
+      <div className="mb-4 rounded-2xl border border-charcoal/8 bg-white p-6 shadow-card animate-fade-in">
+        <h2 className="font-display text-xl font-bold text-charcoal">{show.title}</h2>
+        <div className="mt-3 space-y-2 text-sm text-slate">
+          <p className="flex items-center gap-2">
+            <IconPin className="h-4 w-4 text-slate-light" />
             {venue.name}, {venue.city}
           </p>
-          <p>{formatShowTime(show.starts_at, venue.timezone)}</p>
+          <p className="flex items-center gap-2">
+            <IconClock className="h-4 w-4 text-slate-light" />
+            {formatShowTime(show.starts_at, venue.timezone)}
+          </p>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-charcoal/5 p-6 mb-6 shadow-card animate-fade-in">
-        <h3 className="text-sm font-semibold text-charcoal uppercase tracking-wider mb-4">
-          Order Details
+      <div className="mb-8 rounded-2xl border border-charcoal/8 bg-white p-6 shadow-card animate-fade-in">
+        <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate">
+          Order details
         </h3>
-        <div className="space-y-3">
+        <div className="mt-4 space-y-3">
           {booking.booking_items.map((item) => (
             <div key={item.tier_id} className="flex justify-between text-sm">
               <span className="text-slate">
                 {item.quantity} × {item.ticket_tiers.label}
               </span>
-              <span className="text-charcoal font-medium">
+              <span className="font-medium tabular-nums text-charcoal">
                 {formatPrice(item.line_total_minor)}
               </span>
             </div>
           ))}
-          <div className="border-t border-charcoal/5 pt-3 space-y-2">
+          <div className="space-y-2 border-t border-dashed border-charcoal/10 pt-3">
             <div className="flex justify-between text-sm">
               <span className="text-slate">Subtotal</span>
-              <span className="text-charcoal">{formatPrice(booking.subtotal_minor)}</span>
+              <span className="tabular-nums text-charcoal">
+                {formatPrice(booking.subtotal_minor)}
+              </span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-slate">Booking fee</span>
-              <span className="text-charcoal">{formatPrice(booking.fee_minor)}</span>
+              <span className="tabular-nums text-charcoal">{formatPrice(booking.fee_minor)}</span>
             </div>
-            <div className="flex justify-between text-lg font-bold border-t border-charcoal/5 pt-2">
+            <div className="flex justify-between border-t border-charcoal/8 pt-2 text-lg font-bold">
               <span>Total paid</span>
-              <span>{formatPrice(booking.total_minor)}</span>
+              <span className="tabular-nums">{formatPrice(booking.total_minor)}</span>
             </div>
           </div>
         </div>

@@ -26,7 +26,7 @@ export function Pagination({ page, totalPages, total }: PaginationProps) {
   };
 
   return (
-    <div className="flex items-center justify-between pt-8">
+    <div className="flex flex-col items-center justify-between gap-4 border-t border-charcoal/8 pt-8 sm:flex-row">
       <p className="text-sm text-slate">
         Page {page} of {totalPages} · {total} show{total !== 1 ? 's' : ''}
       </p>
@@ -37,7 +37,7 @@ export function Pagination({ page, totalPages, total }: PaginationProps) {
           disabled={page <= 1}
           onClick={() => goToPage(page - 1)}
         >
-          ← Previous
+          Previous
         </Button>
         <Button
           variant="secondary"
@@ -45,7 +45,7 @@ export function Pagination({ page, totalPages, total }: PaginationProps) {
           disabled={page >= totalPages}
           onClick={() => goToPage(page + 1)}
         >
-          Next →
+          Next
         </Button>
       </div>
     </div>

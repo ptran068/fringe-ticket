@@ -1,10 +1,12 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getShow, getShowAvailability, getTicketTiers } from '@/server/repositories/shows';
-import { formatShowTime, formatShowDate } from '@/domain/time';
+import { formatShowTimeOnly, formatShowDate, showDateParts } from '@/domain/time';
 import { formatPrice, tierPrice } from '@/domain/pricing';
 import { AvailabilityBadge } from '@/components/ui/availability-badge';
 import { TicketSelector } from '@/components/checkout/ticket-selector';
+import { IconCalendar, IconChevronLeft, IconClock, IconPin } from '@/components/ui/icons';
+import { showPosterTone } from '@/lib/show-art';
 
 interface ShowPageProps {
   params: Promise<{ id: string }>;
@@ -21,124 +23,104 @@ export default async function ShowPage({ params }: ShowPageProps) {
   if (!show) notFound();
 
   const venue = show.venues;
+  const parts = showDateParts(show.starts_at, venue.timezone);
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-      <Link
-        href="/"
-        className="inline-flex items-center gap-1 text-sm text-slate hover:text-charcoal transition-colors mb-6"
+    <div>
+      <div
+        className={`relative isolate overflow-hidden bg-gradient-to-br text-white ${showPosterTone(show.id)}`}
       >
-        <svg
-          className="w-4 h-4"
-          fill="none"
-          viewBox="0 0 24 24"
-          strokeWidth={1.5}
-          stroke="currentColor"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-        </svg>
-        Back to shows
-      </Link>
-
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 lg:gap-12">
-        <div className="lg:col-span-3">
-          <h1 className="font-[family-name:var(--font-display)] text-3xl sm:text-4xl font-bold text-charcoal leading-tight mb-4">
-            {show.title}
-          </h1>
-
-          {show.description && (
-            <p className="text-slate text-lg mb-6 leading-relaxed">{show.description}</p>
-          )}
-
-          <div className="space-y-3 mb-6">
-            <InfoRow
-              icon={
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"
-                  />
-                </svg>
-              }
-              label={`${venue.name}, ${venue.city}`}
-            />
-            <InfoRow
-              icon={
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"
-                  />
-                </svg>
-              }
-              label={formatShowDate(show.starts_at, venue.timezone)}
-            />
-            <InfoRow
-              icon={
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              }
-              label={formatShowTime(show.starts_at, venue.timezone)}
-            />
-          </div>
-
-          <AvailabilityBadge availability={availability} />
-
-          <div className="mt-8 bg-white rounded-xl border border-charcoal/5 p-6">
-            <h3 className="text-sm font-semibold text-charcoal uppercase tracking-wider mb-4">
-              Ticket Prices
-            </h3>
-            <div className="space-y-3">
-              {tiers.map((tier) => (
-                <div key={tier.id} className="flex justify-between items-center">
-                  <span className="text-sm text-slate">
-                    {tier.label}
-                    {tier.percentage < 100 && (
-                      <span className="text-xs text-slate-light ml-1">({tier.percentage}%)</span>
-                    )}
-                  </span>
-                  <span className="font-semibold text-charcoal">
-                    {formatPrice(tierPrice(show.base_price_minor, tier.percentage))}
-                  </span>
-                </div>
-              ))}
+        <div
+          className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-amber/25 blur-3xl"
+          aria-hidden="true"
+        />
+        <div className="page-wrap relative py-8 sm:py-12">
+          <Link
+            href="/"
+            className="mb-8 inline-flex items-center gap-1 text-sm text-white/70 transition-colors hover:text-white"
+          >
+            <IconChevronLeft className="h-4 w-4" />
+            Back to shows
+          </Link>
+          <div className="flex flex-wrap items-end justify-between gap-6">
+            <div className="max-w-2xl">
+              <p className="kicker !text-amber-light mb-3">{venue.city}</p>
+              <h1 className="font-display text-3xl font-bold leading-tight tracking-tight sm:text-5xl">
+                {show.title}
+              </h1>
+              {show.description && (
+                <p className="mt-4 max-w-xl text-base leading-relaxed text-white/75 sm:text-lg">
+                  {show.description}
+                </p>
+              )}
+            </div>
+            <div className="rounded-2xl border border-white/15 bg-white/10 px-5 py-4 text-center backdrop-blur-sm">
+              <p className="text-[0.65rem] font-semibold tracking-[0.22em] text-white/70">
+                {parts.month}
+              </p>
+              <p className="font-display text-4xl font-bold leading-none">{parts.day}</p>
+              <p className="mt-1 text-xs uppercase tracking-wider text-white/70">{parts.weekday}</p>
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="lg:col-span-2">
-          <div className="sticky top-24">
-            <TicketSelector show={show} availability={availability} tiers={tiers} />
+      <div className="page-wrap py-8 sm:py-12">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-5 lg:gap-12">
+          <div className="lg:col-span-3">
+            <div className="mb-6 flex flex-wrap items-center gap-2">
+              <AvailabilityBadge availability={availability} />
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              <InfoCard
+                icon={<IconPin className="h-5 w-5" />}
+                label="Venue"
+                value={`${venue.name}, ${venue.city}`}
+              />
+              <InfoCard
+                icon={<IconCalendar className="h-5 w-5" />}
+                label="Date"
+                value={formatShowDate(show.starts_at, venue.timezone)}
+              />
+              <InfoCard
+                icon={<IconClock className="h-5 w-5" />}
+                label="Time"
+                value={formatShowTimeOnly(show.starts_at, venue.timezone)}
+              />
+            </div>
+
+            <div className="mt-8 overflow-hidden rounded-2xl border border-charcoal/8 bg-white p-6 shadow-card">
+              <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate">
+                Ticket prices
+              </h2>
+              <ul className="mt-4 divide-y divide-charcoal/6">
+                {tiers.map((tier) => (
+                  <li
+                    key={tier.id}
+                    className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
+                  >
+                    <span className="text-sm text-slate">
+                      {tier.label}
+                      {tier.percentage < 100 && (
+                        <span className="ml-1.5 text-xs text-slate-light">
+                          ({tier.percentage}%)
+                        </span>
+                      )}
+                    </span>
+                    <span className="font-semibold tabular-nums text-charcoal">
+                      {formatPrice(tierPrice(show.base_price_minor, tier.percentage))}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          <div className="lg:col-span-2">
+            <div className="lg:sticky lg:top-24">
+              <TicketSelector show={show} availability={availability} tiers={tiers} />
+            </div>
           </div>
         </div>
       </div>
@@ -146,11 +128,14 @@ export default async function ShowPage({ params }: ShowPageProps) {
   );
 }
 
-function InfoRow({ icon, label }: { icon: React.ReactNode; label: string }) {
+function InfoCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="flex items-center gap-3 text-slate">
-      <span className="text-slate-light shrink-0">{icon}</span>
-      <span className="text-sm font-medium">{label}</span>
+    <div className="rounded-2xl border border-charcoal/8 bg-white p-4 shadow-card">
+      <div className="flex items-center gap-2 text-slate-light">
+        {icon}
+        <span className="text-[0.65rem] font-semibold uppercase tracking-wider">{label}</span>
+      </div>
+      <p className="mt-2 text-sm font-medium leading-snug text-charcoal">{value}</p>
     </div>
   );
 }

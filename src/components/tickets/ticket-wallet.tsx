@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { TicketPass } from '@/components/tickets/ticket-pass';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
+import { IconClock, IconPin, IconTicket } from '@/components/ui/icons';
 import { formatPrice } from '@/domain/pricing';
 import { encodeTicketQr } from '@/domain/ticket';
 import { formatShowTime } from '@/domain/time';
@@ -22,20 +23,8 @@ import {
 
 function TicketIcon() {
   return (
-    <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-charcoal/5">
-      <svg
-        className="h-8 w-8 text-slate-light"
-        fill="none"
-        viewBox="0 0 24 24"
-        strokeWidth={1.5}
-        stroke="currentColor"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z"
-        />
-      </svg>
+    <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-charcoal/5">
+      <IconTicket className="h-8 w-8 text-slate-light" />
     </div>
   );
 }
@@ -54,14 +43,12 @@ function TicketCard({
   const upcoming = isUpcomingTicket(ticket);
 
   return (
-    <article className="rounded-xl border border-charcoal/5 bg-white p-6 shadow-card">
+    <article className="ticket-notch overflow-hidden rounded-2xl border border-charcoal/8 bg-white p-5 shadow-card sm:p-6">
       <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
         <TicketPass payload={payload} reference={ticket.reference} size="md" />
         <div className="min-w-0 flex-1">
           <div className="mb-2 flex flex-wrap items-center gap-2">
-            <h2 className="font-[family-name:var(--font-display)] text-xl font-bold text-charcoal">
-              {ticket.showTitle}
-            </h2>
+            <h2 className="font-display text-xl font-bold text-charcoal">{ticket.showTitle}</h2>
             <span
               className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${
                 upcoming
@@ -72,10 +59,14 @@ function TicketCard({
               {upcoming ? 'Upcoming' : 'Past'}
             </span>
           </div>
-          <p className="text-sm text-slate">
+          <p className="flex items-center gap-1.5 text-sm text-slate">
+            <IconPin className="h-3.5 w-3.5" />
             {ticket.venueName}, {ticket.venueCity}
           </p>
-          <p className="text-sm text-slate">{formatShowTime(ticket.startsAt, ticket.timezone)}</p>
+          <p className="mt-1 flex items-center gap-1.5 text-sm text-slate">
+            <IconClock className="h-3.5 w-3.5" />
+            {formatShowTime(ticket.startsAt, ticket.timezone)}
+          </p>
           <ul className="mt-4 space-y-1 text-sm text-slate">
             {ticket.items.map((item) => (
               <li key={`${item.label}-${item.quantity}`}>
@@ -83,7 +74,7 @@ function TicketCard({
               </li>
             ))}
           </ul>
-          <p className="mt-3 text-sm font-semibold text-charcoal">
+          <p className="mt-3 text-sm font-semibold tabular-nums text-charcoal">
             Total {formatPrice(ticket.totalMinor)}
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
@@ -117,8 +108,8 @@ export function TicketWallet() {
   if (hydrating) {
     return (
       <div className="space-y-4" aria-hidden="true">
-        <div className="h-48 animate-pulse rounded-xl bg-white shadow-card" />
-        <div className="h-48 animate-pulse rounded-xl bg-white shadow-card" />
+        <div className="h-48 animate-pulse rounded-2xl bg-white shadow-card" />
+        <div className="h-48 animate-pulse rounded-2xl bg-white shadow-card" />
       </div>
     );
   }
@@ -148,7 +139,7 @@ export function TicketWallet() {
     <div className="space-y-8">
       {upcoming.length > 0 && (
         <section className="space-y-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-slate">Upcoming</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate">Upcoming</h2>
           {upcoming.map((ticket) => (
             <TicketCard key={ticket.bookingId} ticket={ticket} onRemove={handleRemove} />
           ))}
@@ -156,7 +147,7 @@ export function TicketWallet() {
       )}
       {past.length > 0 && (
         <section className="space-y-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-slate">Past</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate">Past</h2>
           {past.map((ticket) => (
             <TicketCard key={ticket.bookingId} ticket={ticket} onRemove={handleRemove} />
           ))}

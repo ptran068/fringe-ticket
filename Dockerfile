@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1
+
 FROM node:24-alpine AS build
 WORKDIR /app
 
@@ -24,8 +26,36 @@ RUN apk add --no-cache nodejs libc6-compat
 COPY --from=build /app/public ./public
 COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/.next/static ./.next/static
-COPY nginx/ /etc/nginx/conf.d/
-COPY start.sh /start.sh
+
+COPY <<'EOF' /etc/nginx/conf.d/default.conf
+server {
+    listen 80;
+    listen [::]:80;
+    server_name _;
+    client_max_body_size 20M;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}
+EOF
+
+COPY <<'EOF' /start.sh
+#!/bin/sh
+set -e
+export NODE_ENV=production
+export PORT=3000
+export HOSTNAME=0.0.0.0
+node /app/server.js &
+exec nginx -g "daemon off;"
+EOF
 
 RUN chmod +x /start.sh
 
