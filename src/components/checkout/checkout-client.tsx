@@ -53,7 +53,7 @@ export function CheckoutClient({ hold }: CheckoutClientProps) {
     (sum, item) => sum + item.unit_price_minor * item.quantity,
     0,
   );
-  const fee = Math.min(Math.round(subtotal * 6 / 100), 900);
+  const fee = Math.min(Math.round((subtotal * 6) / 100), 900);
   const total = subtotal + fee;
 
   const show = hold.shows;
@@ -86,8 +86,18 @@ export function CheckoutClient({ hold }: CheckoutClientProps) {
     return (
       <div className="text-center py-12 animate-fade-in">
         <div className="w-20 h-20 rounded-full bg-coral/10 flex items-center justify-center mx-auto mb-6">
-          <svg className="w-10 h-10 text-coral" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <svg
+            className="w-10 h-10 text-coral"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
           </svg>
         </div>
         <h1 className="font-[family-name:var(--font-display)] text-2xl font-bold text-charcoal mb-2">
@@ -110,21 +120,31 @@ export function CheckoutClient({ hold }: CheckoutClientProps) {
       {/* Status header */}
       <div className="text-center mb-8">
         <div className="w-16 h-16 rounded-full bg-amber/10 flex items-center justify-center mx-auto mb-4">
-          <svg className="w-8 h-8 text-amber" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z" />
+          <svg
+            className="w-8 h-8 text-amber"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z"
+            />
           </svg>
         </div>
         <h1 className="font-[family-name:var(--font-display)] text-2xl font-bold text-charcoal mb-1">
           Tickets Reserved
         </h1>
-        <p className="text-sm text-slate">
-          Complete your booking before the timer expires.
-        </p>
+        <p className="text-sm text-slate">Complete your booking before the timer expires.</p>
       </div>
 
       {/* Countdown */}
       <div className="bg-white rounded-xl border border-charcoal/5 p-6 text-center mb-6 shadow-card">
-        <p className="text-xs uppercase tracking-wider text-slate font-medium mb-2">Time remaining</p>
+        <p className="text-xs uppercase tracking-wider text-slate font-medium mb-2">
+          Time remaining
+        </p>
         <Countdown expiresAt={hold.expires_at} onExpire={handleExpire} />
       </div>
 
@@ -134,14 +154,18 @@ export function CheckoutClient({ hold }: CheckoutClientProps) {
           {show.title}
         </h2>
         <div className="text-sm text-slate space-y-1">
-          <p>{venue.name}, {venue.city}</p>
+          <p>
+            {venue.name}, {venue.city}
+          </p>
           <p>{formatShowTime(show.starts_at, venue.timezone)}</p>
         </div>
       </div>
 
       {/* Order breakdown */}
       <div className="bg-white rounded-xl border border-charcoal/5 p-6 mb-6 shadow-card">
-        <h3 className="text-sm font-semibold text-charcoal uppercase tracking-wider mb-4">Order Summary</h3>
+        <h3 className="text-sm font-semibold text-charcoal uppercase tracking-wider mb-4">
+          Order Summary
+        </h3>
 
         <div className="space-y-3">
           {hold.hold_items.map((item) => (
@@ -174,7 +198,10 @@ export function CheckoutClient({ hold }: CheckoutClientProps) {
 
       {/* Error */}
       {error && (
-        <div className="bg-coral/10 border border-coral/20 rounded-lg p-3 text-sm text-coral mb-4 animate-fade-in" role="alert">
+        <div
+          className="bg-coral/10 border border-coral/20 rounded-lg p-3 text-sm text-coral mb-4 animate-fade-in"
+          role="alert"
+        >
           {error}
         </div>
       )}

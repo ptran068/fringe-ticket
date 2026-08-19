@@ -5,13 +5,109 @@ insert into public.ticket_tiers (id, label, percentage, sort_order) values
 ('under_26', 'Under 26', 50, 3)
 on conflict do nothing;
 
--- organisers
+-- Auth users. Organiser table ids match auth.uid() so RLS can use
+-- organiser_id = auth.uid() with no extra join.
+-- Password for both demo accounts: fringe-demo-2026
+insert into auth.users (
+  instance_id,
+  id,
+  aud,
+  role,
+  email,
+  encrypted_password,
+  email_confirmed_at,
+  raw_app_meta_data,
+  raw_user_meta_data,
+  created_at,
+  updated_at,
+  confirmation_token,
+  email_change,
+  email_change_token_new,
+  recovery_token
+) values
+(
+  '00000000-0000-0000-0000-000000000000',
+  '00000000-0000-0000-0000-000000000001',
+  'authenticated',
+  'authenticated',
+  'hello@fringemavericks.com',
+  crypt('fringe-demo-2026', gen_salt('bf')),
+  now(),
+  '{"provider":"email","providers":["email"]}',
+  '{}',
+  now(),
+  now(),
+  '',
+  '',
+  '',
+  ''
+),
+(
+  '00000000-0000-0000-0000-000000000000',
+  '00000000-0000-0000-0000-000000000002',
+  'authenticated',
+  'authenticated',
+  'contact@undergroundarts.org',
+  crypt('fringe-demo-2026', gen_salt('bf')),
+  now(),
+  '{"provider":"email","providers":["email"]}',
+  '{}',
+  now(),
+  now(),
+  '',
+  '',
+  '',
+  ''
+)
+on conflict (id) do nothing;
+
+insert into auth.identities (
+  id,
+  user_id,
+  identity_data,
+  provider,
+  provider_id,
+  last_sign_in_at,
+  created_at,
+  updated_at
+) values
+(
+  '00000000-0000-0000-0000-000000000001',
+  '00000000-0000-0000-0000-000000000001',
+  jsonb_build_object(
+    'sub', '00000000-0000-0000-0000-000000000001',
+    'email', 'hello@fringemavericks.com'
+  ),
+  'email',
+  '00000000-0000-0000-0000-000000000001',
+  now(),
+  now(),
+  now()
+),
+(
+  '00000000-0000-0000-0000-000000000002',
+  '00000000-0000-0000-0000-000000000002',
+  jsonb_build_object(
+    'sub', '00000000-0000-0000-0000-000000000002',
+    'email', 'contact@undergroundarts.org'
+  ),
+  'email',
+  '00000000-0000-0000-0000-000000000002',
+  now(),
+  now(),
+  now()
+)
+on conflict (id) do nothing;
+
+-- organisers (same ids as auth.users)
 insert into public.organisers (id, name, email) values
 ('00000000-0000-0000-0000-000000000001', 'Fringe Mavericks', 'hello@fringemavericks.com'),
 ('00000000-0000-0000-0000-000000000002', 'Underground Arts', 'contact@undergroundarts.org')
 on conflict do nothing;
 
--- venues
+-- venues — IANA timezones. Edinburgh/London and New York observe DST;
+-- Singapore does not. Offsets on starts_at below match August 2026
+-- (AEST +10, BST +01, EDT -04, SGT +08, NZST +12).
 insert into public.venues (id, name, city, timezone, capacity) values
 ('10000000-0000-0000-0000-000000000001', 'The Spiegeltent', 'Sydney', 'Australia/Sydney', 200),
 ('10000000-0000-0000-0000-000000000002', 'Basement Theatre', 'Sydney', 'Australia/Sydney', 80),

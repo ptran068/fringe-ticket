@@ -31,10 +31,20 @@ export function Pagination({ page, totalPages, total }: PaginationProps) {
         Page {page} of {totalPages} · {total} show{total !== 1 ? 's' : ''}
       </p>
       <div className="flex gap-2">
-        <Button variant="secondary" size="sm" disabled={page <= 1} onClick={() => goToPage(page - 1)}>
+        <Button
+          variant="secondary"
+          size="sm"
+          disabled={page <= 1}
+          onClick={() => goToPage(page - 1)}
+        >
           ← Previous
         </Button>
-        <Button variant="secondary" size="sm" disabled={page >= totalPages} onClick={() => goToPage(page + 1)}>
+        <Button
+          variant="secondary"
+          size="sm"
+          disabled={page >= totalPages}
+          onClick={() => goToPage(page + 1)}
+        >
           Next →
         </Button>
       </div>

@@ -1,6 +1,5 @@
-'use server';
-
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createAnonClient } from '@/lib/supabase/anon';
+import { createClient } from '@/lib/supabase/server';
 import type {
   Show,
   ShowWithAvailability,
@@ -13,81 +12,48 @@ import type {
 
 const PAGE_SIZE = 10;
 
-/** Fetch paginated shows with availability */
-export async function getShows(filters: ShowFilters = {}): Promise<PaginatedResult<ShowWithAvailability>> {
-  const supabase = createAdminClient();
+interface ListShowsRpc {
+  data: ShowWithAvailability[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+/** Public catalogue. Uses the anon key so RLS is the public-read policy. */
+export async function getShows(
+  filters: ShowFilters = {},
+): Promise<PaginatedResult<ShowWithAvailability>> {
+  const supabase = createAnonClient();
   const page = filters.page ?? 1;
   const pageSize = filters.pageSize ?? PAGE_SIZE;
-  const offset = (page - 1) * pageSize;
 
-  // Base query for shows with venues
-  let query = supabase
-    .from('shows')
-    .select('*, venues(*)', { count: 'exact' })
-    .eq('status', 'active')
-    .order('starts_at', { ascending: true });
-
-  // City filter via venue join
-  if (filters.city && filters.city !== 'all') {
-    // We need to filter by venue city — use a subquery approach
-    const { data: venueIds } = await supabase
-      .from('venues')
-      .select('id')
-      .eq('city', filters.city);
-
-    if (venueIds && venueIds.length > 0) {
-      query = query.in('venue_id', venueIds.map((v) => v.id));
-    } else {
-      return { data: [], total: 0, page, pageSize, totalPages: 0 };
-    }
-  }
-
-  // Sort
-  if (filters.sort === 'price_asc') {
-    query = query.order('base_price_minor', { ascending: true });
-  } else if (filters.sort === 'price_desc') {
-    query = query.order('base_price_minor', { ascending: false });
-  }
-
-  // Pagination
-  query = query.range(offset, offset + pageSize - 1);
-
-  const { data: shows, count, error } = await query;
+  const { data, error } = await supabase.rpc('list_shows', {
+    p_city: filters.city && filters.city !== 'all' ? filters.city : null,
+    p_availability:
+      filters.availability && filters.availability !== 'all' ? filters.availability : null,
+    p_sort: filters.sort ?? 'starts_at',
+    p_page: page,
+    p_page_size: pageSize,
+  });
 
   if (error) {
     throw new Error(`Failed to fetch shows: ${error.message}`);
   }
 
-  // Fetch availability for each show
-  const showsWithAvailability: ShowWithAvailability[] = await Promise.all(
-    (shows as Show[]).map(async (show) => {
-      const availability = await getShowAvailability(show.id);
-      return { ...show, availability };
-    }),
-  );
-
-  // Filter by availability status if specified
-  let filtered = showsWithAvailability;
-  if (filters.availability && filters.availability !== 'all') {
-    filtered = showsWithAvailability.filter((s) => s.availability.status === filters.availability);
-  }
-
-  const total = filters.availability && filters.availability !== 'all'
-    ? filtered.length
-    : (count ?? 0);
+  const result = data as ListShowsRpc;
 
   return {
-    data: filtered,
-    total,
-    page,
-    pageSize,
-    totalPages: Math.ceil(total / pageSize),
+    data: result.data ?? [],
+    total: result.total,
+    page: result.page,
+    pageSize: result.page_size,
+    totalPages: result.total_pages,
   };
 }
 
-/** Fetch a single show with venue */
 export async function getShow(showId: string): Promise<Show | null> {
-  const supabase = createAdminClient();
+  const supabase = createAnonClient();
 
   const { data, error } = await supabase
     .from('shows')
@@ -99,9 +65,8 @@ export async function getShow(showId: string): Promise<Show | null> {
   return data as Show;
 }
 
-/** Fetch show availability via RPC */
 export async function getShowAvailability(showId: string): Promise<ShowAvailability> {
-  const supabase = createAdminClient();
+  const supabase = createAnonClient();
 
   const { data, error } = await supabase.rpc('get_show_availability', {
     p_show_id: showId,
@@ -114,109 +79,132 @@ export async function getShowAvailability(showId: string): Promise<ShowAvailabil
   return data as ShowAvailability;
 }
 
-/** Get all ticket tiers */
 export async function getTicketTiers(): Promise<TicketTier[]> {
-  const supabase = createAdminClient();
+  const supabase = createAnonClient();
 
-  const { data, error } = await supabase
-    .from('ticket_tiers')
-    .select('*')
-    .order('sort_order');
+  const { data, error } = await supabase.from('ticket_tiers').select('*').order('sort_order');
 
   if (error) throw new Error(`Failed to fetch tiers: ${error.message}`);
   return data as TicketTier[];
 }
 
-/** Get all distinct cities from venues */
 export async function getCities(): Promise<string[]> {
-  const supabase = createAdminClient();
+  const supabase = createAnonClient();
 
-  const { data, error } = await supabase
-    .from('venues')
-    .select('city')
-    .order('city');
+  const { data, error } = await supabase.from('venues').select('city').order('city');
 
   if (error) throw new Error(`Failed to fetch cities: ${error.message}`);
 
-  // Deduplicate
-  const cities = [...new Set((data as Venue[]).map((v) => v.city))];
-  return cities;
+  return [...new Set((data as Venue[]).map((v) => v.city))];
 }
 
-/** Fetch shows for an organiser */
-export async function getOrganiserShows(organiserId: string): Promise<ShowWithAvailability[]> {
-  const supabase = createAdminClient();
+export async function getVenues(): Promise<Venue[]> {
+  const supabase = createAnonClient();
+  const { data, error } = await supabase.from('venues').select('*').order('name');
+  if (error) throw new Error(`Failed to fetch venues: ${error.message}`);
+  return data as Venue[];
+}
+
+/**
+ * Organiser catalogue. Deliberately unfiltered — RLS returns only
+ * organiser_id = auth.uid() rows. A forgotten .eq() cannot leak.
+ */
+export async function getOrganiserShows(): Promise<ShowWithAvailability[]> {
+  const supabase = await createClient();
 
   const { data: shows, error } = await supabase
     .from('shows')
     .select('*, venues(*)')
-    .eq('organiser_id', organiserId)
     .order('starts_at', { ascending: true });
 
   if (error) throw new Error(`Failed to fetch organiser shows: ${error.message}`);
 
   return Promise.all(
-    (shows as Show[]).map(async (show) => {
+    (shows as unknown as Show[]).map(async (show) => {
       const availability = await getShowAvailability(show.id);
       return { ...show, availability };
     }),
   );
 }
 
-/** Fetch bookings for an organiser's shows */
-export async function getOrganiserBookings(organiserId: string) {
-  const supabase = createAdminClient();
+export async function getOrganiserBookings() {
+  const supabase = await createClient();
 
   const { data, error } = await supabase
     .from('bookings')
     .select('*, booking_items(*, ticket_tiers(*)), shows(*, venues(*))')
-    .eq('organiser_id', organiserId)
     .order('created_at', { ascending: false });
 
   if (error) throw new Error(`Failed to fetch bookings: ${error.message}`);
   return data;
 }
 
-/** Fetch a single booking by ID */
-export async function getBooking(bookingId: string) {
-  const supabase = createAdminClient();
-
+export async function getOrganiserShow(showId: string): Promise<Show | null> {
+  const supabase = await createClient();
   const { data, error } = await supabase
-    .from('bookings')
-    .select('*, booking_items(*, ticket_tiers(*)), shows(*, venues(*))')
-    .eq('id', bookingId)
+    .from('shows')
+    .select('*, venues(*)')
+    .eq('id', showId)
     .single();
-
   if (error) return null;
-  return data;
+  return data as Show;
 }
 
-/** Fetch a hold with its items and show data */
+/** Checkout by hold UUID. Table SELECT is denied to anon; RPC is the capability. */
 export async function getHold(holdId: string) {
-  const supabase = createAdminClient();
-
-  const { data, error } = await supabase
-    .from('holds')
-    .select('*, hold_items(*, ticket_tiers(*)), shows(*, venues(*))')
-    .eq('id', holdId)
-    .single();
-
-  if (error) return null;
-  return data;
+  const supabase = createAnonClient();
+  const { data, error } = await supabase.rpc('get_hold_public', { p_hold_id: holdId });
+  if (error || !data) return null;
+  return data as {
+    id: string;
+    status: string;
+    expires_at: string;
+    quantity: number;
+    shows: {
+      id: string;
+      title: string;
+      starts_at: string;
+      base_price_minor: number;
+      venues: {
+        name: string;
+        city: string;
+        timezone: string;
+      };
+    };
+    hold_items: {
+      id: string;
+      tier_id: string;
+      quantity: number;
+      unit_price_minor: number;
+      ticket_tiers: {
+        label: string;
+        percentage: number;
+      };
+    }[];
+  };
 }
 
-/** Get all organisers */
-export async function getOrganisers() {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase.from('organisers').select('*');
-  if (error) throw new Error(`Failed to fetch organisers: ${error.message}`);
-  return data;
-}
-
-/** Get all venues */
-export async function getVenues() {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase.from('venues').select('*').order('name');
-  if (error) throw new Error(`Failed to fetch venues: ${error.message}`);
-  return data;
+export async function getBooking(bookingId: string) {
+  const supabase = createAnonClient();
+  const { data, error } = await supabase.rpc('get_booking_public', { p_booking_id: bookingId });
+  if (error || !data) return null;
+  return data as {
+    id: string;
+    reference: string;
+    subtotal_minor: number;
+    fee_minor: number;
+    total_minor: number;
+    shows: {
+      id: string;
+      title: string;
+      starts_at: string;
+      venues: { name: string; city: string; timezone: string };
+    };
+    booking_items: {
+      tier_id: string;
+      quantity: number;
+      line_total_minor: number;
+      ticket_tiers: { label: string };
+    }[];
+  };
 }

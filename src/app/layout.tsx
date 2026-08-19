@@ -1,16 +1,34 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { Inter, Playfair_Display } from 'next/font/google';
+import { createClient } from '@/lib/supabase/server';
+import { SignOutButton } from '@/components/organiser/sign-out-button';
 import './globals.css';
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+});
+
+const playfair = Playfair_Display({
+  subsets: ['latin'],
+  variable: '--font-playfair',
+});
 
 export const metadata: Metadata = {
   title: 'FRINGE — Festival Tickets',
   description: 'Discover and book tickets for independent theatre, dance, and performance.',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   return (
-    <html lang="en">
-      <body className="min-h-screen bg-cream text-charcoal antialiased" style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}>
+    <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
+      <body className="min-h-screen bg-cream text-charcoal antialiased">
         <header className="border-b border-charcoal/5 bg-white/60 backdrop-blur-md sticky top-0 z-50">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2 group">
@@ -29,11 +47,29 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 What&apos;s On
               </Link>
               <Link
-                href="/organiser"
+                href="/tickets"
                 className="text-sm font-medium text-slate hover:text-charcoal transition-colors"
               >
-                Organisers
+                My Tickets
               </Link>
+              {user ? (
+                <>
+                  <Link
+                    href="/organiser"
+                    className="text-sm font-medium text-slate hover:text-charcoal transition-colors"
+                  >
+                    Dashboard
+                  </Link>
+                  <SignOutButton />
+                </>
+              ) : (
+                <Link
+                  href="/organiser/login"
+                  className="text-sm font-medium text-slate hover:text-charcoal transition-colors"
+                >
+                  Organisers
+                </Link>
+              )}
             </nav>
           </div>
         </header>
@@ -41,7 +77,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <footer className="border-t border-charcoal/5 mt-20 py-8">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <p className="text-xs text-slate text-center">
-              © 2026 Fringe Festival · Independent theatre, dance & performance
+              © 2026 Fringe Festival · Independent theatre, dance &amp; performance
             </p>
           </div>
         </footer>

@@ -5,6 +5,7 @@ import {
   bookingFee,
   calculateOrder,
   formatPrice,
+  priceFrom,
   TicketTier,
 } from '@/domain/pricing';
 
@@ -109,6 +110,17 @@ describe('Pricing Module', () => {
     it('maintains total = subtotal + fee invariant', () => {
       const order = calculateOrder(3500, tiers, { full: 3, conc: 2 });
       expect(order.totalMinor).toBe(order.subtotalMinor + order.feeMinor);
+    });
+  });
+
+  describe('priceFrom', () => {
+    it('returns the cheapest tier price', () => {
+      expect(priceFrom(2000, [100, 67, 50])).toBe(1000);
+      expect(priceFrom(2500, [100, 67, 50])).toBe(1250);
+    });
+
+    it('falls back to base when no percentages given', () => {
+      expect(priceFrom(2000, [])).toBe(2000);
     });
   });
 

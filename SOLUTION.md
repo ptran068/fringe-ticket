@@ -1,233 +1,97 @@
-# SOLUTION.md — Fringe Festival Ticketing System
+# SOLUTION.md — Fringe
 
-## What Was Built
+## What was built
 
-A full-stack festival ticketing platform with:
+- Paginated show browse (10 per page, real totals) with city / availability filters and start-time sort
+- Distinct loading (skeleton), empty, and error (`error.tsx`) states
+- 10-minute holds, countdown, confirm-to-booking, inventory returned on expiry without a sweeper
+- Organiser login (seeded auth users), create/edit own shows, own bookings
+- RLS so organiser A cannot read or update organiser B's shows/bookings **even if the query is unfiltered**
+- Typed `find_available_shows` using the same `get_show_availability` RPC as the UI
+- Tests: fee arithmetic, timezones/DST, concurrent oversell, unswept expired holds, concierge tool
+- Integrity guard that actually exercises oversell, expiry, IANA/`timestamptz`, and RLS
+- CI: `.github/workflows/ci.yml` runs `npm run verify`
 
-- **Show browsing** — Paginated, filterable show discovery with city/availability/sort controls
-- **Ticket selection** — Multi-tier ticket selector with real-time order calculation
-- **Hold system** — 10-minute expiring ticket holds with countdown timer
-- **Booking confirmation** — Atomic hold-to-booking conversion with reference codes
-- **Organiser dashboard** — Show management and booking visibility per organiser
-- **Typed concierge tool** — `find_available_shows` with Zod validation
-- **35 unit tests** — Pricing, timezone, and availability domain logic
+## Where logic lives
 
----
+| Concern             | Authority                                                                          |
+| ------------------- | ---------------------------------------------------------------------------------- |
+| Inventory           | Postgres RPCs + `SELECT … FOR UPDATE` on the show row                              |
+| Expiry              | `expires_at > now()` in every inventory count; confirm checks inside the lock      |
+| Money               | Integer minor units; `round()` once per division in SQL and `Math.round` in domain |
+| Time                | `timestamptz` stored UTC; display via `Intl` with the venue IANA zone              |
+| Organiser isolation | RLS (`organiser_id = auth.uid()`), not a repository `.eq()`                        |
 
-## Architecture
+The UI is informational. A customer can be told a seat is free and still lose the race; the RPC decides.
 
-```
-src/
-  domain/           Pure business logic (no DB, no framework)
-    pricing.ts       Integer minor-unit math, fee calculation
-    availability.ts  Available/held/sold-out state machine
-    time.ts          Timezone-aware formatting via Intl
-  server/
-    repositories/    Database reads (admin client)
-    actions/         Mutations (atomic RPC calls)
-  components/
-    ui/              Design system primitives
-    shows/           Show browsing components
-    checkout/        Ticket selection + countdown
-    organiser/       Dashboard components
-  tools/             Typed concierge tool
-  types/             Shared TypeScript types
-  lib/supabase/      Client helpers (browser/server/admin)
-```
-
-**Key principle**: UI is informational. The database transaction is authoritative.
-
----
-
-## Inventory / Concurrency Strategy
-
-### The Invariant
+## Inventory
 
 ```
-confirmed_bookings + active_holds ≤ venue.capacity
+sold (booking_items) + active non-expired holds ≤ venue.capacity
 ```
 
-### How It's Enforced
+`create_hold` and `confirm_hold` both lock the **show** row. Two concurrent last-seat holds: one `success`, one `INSUFFICIENT_INVENTORY`. Confirming a hold does not free a seat (held → sold, same count).
 
-Both `create_hold` and `confirm_hold` are **Postgres RPC functions** that use `SELECT ... FOR UPDATE` on the show row:
+Direct `INSERT` on `holds` / `bookings` is revoked for `anon` and `authenticated`. The only public mutation path is the RPC. That is what "can't be raced around" means.
 
-```sql
-SELECT v.capacity, s.base_price_minor
-FROM public.shows s
-JOIN public.venues v ON v.id = s.venue_id
-WHERE s.id = p_show_id AND s.status = 'active'
-FOR UPDATE OF s;  -- Serializes concurrent access
-```
+Expired holds with `status = 'active'` are excluded by `expires_at > now()`. No cron required for correctness.
 
-This means:
-1. **Two concurrent holds**: The second transaction waits for the first to commit, then recalculates availability
-2. **Capacity=1, two users**: Exactly one succeeds, one gets `INSUFFICIENT_INVENTORY`
-3. **Hold + confirm race**: Both lock the show row, serialized deterministically
-4. **Expired hold + new hold**: `expires_at > now()` excludes expired holds from inventory count
+Sold-out: `sold >= capacity`. Temporarily unavailable: remaining seats are in other baskets. The badge copy is different; "Get tickets" is disabled for both, with different reasons.
 
-### Why This Can't Oversell
+## Money
 
-The `FOR UPDATE` lock on the show row creates a **serialization point**. Within the locked transaction:
-1. Count confirmed (status='confirmed')
-2. Count active non-expired (status='active' AND expires_at > now())
-3. Calculate available = capacity - confirmed - active
-4. If available < requested → fail
-5. If available >= requested → insert hold
+- `tierPrice = round(base * pct / 100)`
+- `fee = min(round(subtotal * 6 / 100), 900)`
+- `total = subtotal + fee` (also a table `CHECK`)
+- Card "From" is the cheapest tier (under-26 at 50%), not the base price
+- Confirmation lines + fee = total; the number persisted is the SQL one
 
-Steps 1-5 execute atomically. No concurrent transaction can modify the counts between steps 1 and 5.
+## Timezones
 
----
+Venues use IANA ids (`Australia/Sydney`, `Europe/London`, `America/New_York`, `Asia/Singapore`, …). August 2026 seed offsets match those zones (AEST, BST, EDT). DST is covered by tests on Sydney summer vs winter. Organiser create/edit interprets `datetime-local` in the **venue** zone, not the browser's.
 
-## Hold Expiration Strategy
+## RLS
 
-### No background job required for correctness
+- `anon`: read venues, tiers, all shows (public catalogue). No write on holds/bookings.
+- `authenticated`: `SELECT/INSERT/UPDATE` shows where `organiser_id = auth.uid()`. `SELECT` bookings where `organiser_id = auth.uid()`.
+- Public pages use the anon key **without** the organiser JWT, so a logged-in organiser still sees the full festival on `/`.
+- Organiser dashboard queries are **unfiltered**. Forgetting `.eq('organiser_id', me)` still cannot leak.
+- Checkout reads a hold/booking by UUID through `SECURITY DEFINER` RPCs (the UUID is the capability). Organisers cannot enumerate the tables via PostgREST.
 
-Every availability query includes:
-```sql
-AND status = 'active' AND expires_at > now()
-```
+Organiser ids are the auth user ids. Seeded passwords: `fringe-demo-2026`.
 
-Expired holds are **automatically excluded** from inventory calculations regardless of whether any cleanup process has run.
+## Pagination
 
-### Client-side countdown
+`list_shows` filters by availability **before** `LIMIT`, so "sold out" page 1 is not "the first 10 shows, then drop the ones that aren't sold out." Totals are the filtered population.
 
-1. Server returns `expires_at` (UTC timestamp) with the hold
-2. Client calculates `remaining = expires_at - Date.now()` 
-3. `setInterval` updates the countdown every second
-4. When countdown reaches 0 → UI shows expired state, disables confirm
-5. Confirm action still validates server-side (DB is authoritative)
+## Concierge tool
 
-### The race: hold expires at exact moment of confirmation
+`findAvailableShows({ city, onDate, maxPriceMinor, minSeats })`
 
-The `confirm_hold` RPC checks `expires_at <= now()` inside the locked transaction. If expired, the hold is marked 'expired' and the confirmation fails. The DB timestamp is the sole authority.
+- Zod input
+- Same `get_show_availability` as the cards
+- Skips sold out **and** temporarily unavailable (`isGenuinelyBookable`)
+- `maxPriceMinor` compares the cheapest tier, which is what "under $30" means
 
----
+## What was cut (on purpose)
 
-## Pricing / Rounding Strategy
+| Cut                   | Why                                                                   |
+| --------------------- | --------------------------------------------------------------------- |
+| Waitlist              | Nice-to-have; core inventory was not done until RLS + races were real |
+| Optimistic hold UI    | Rollback path is easy to fake; the RPC is the product                 |
+| Deploy                | Local `supabase start` is enough for the reviewer                     |
+| Playwright            | Vitest against live RPCs pins the concurrent path cheaper             |
+| Real email / payments | Out of scope                                                          |
 
-- **All money**: Integer minor units (cents). `$20.00 = 2000`
-- **Tier price**: `Math.round(basePriceMinor * percentage / 100)`
-- **Line total**: `unitPrice * quantity` (no rounding needed)
-- **Booking fee**: `Math.min(Math.round(subtotal * 6 / 100), 900)`
-- **Total**: `subtotal + fee`
-- **Rounding policy**: `Math.round` applied exactly once per division
-- **Display**: `formatPrice(2000)` → `"$20.00"`
+## What I would do next
 
-The same calculation runs in:
-1. Client-side ticket selector (preview)
-2. Postgres `confirm_hold` RPC (authoritative)
+1. Email magic-link instead of a shared demo password
+2. Materialize availability to kill the remaining per-show RPC on the organiser dashboard
+3. A tiny waitlist that subscribes to `expires_at` rather than polling
+4. Constraint / trigger as a second line of defence on `holds` quantity vs capacity (the lock is the first)
 
-The client total is informational. The DB total is persisted.
+## Trade-offs I would defend
 
----
-
-## Timezone Strategy
-
-- **Storage**: `TIMESTAMPTZ` in Postgres (always UTC internally)
-- **Display**: `Intl.DateTimeFormat` with venue's IANA timezone
-- **DST**: Handled automatically by the Intl API
-- **Browser timezone**: Never used for show times
-
-```typescript
-new Intl.DateTimeFormat('en-AU', {
-  timeZone: venue.timezone, // e.g. 'Australia/Sydney'
-  // ...format options
-}).format(date);
-```
-
-Seed data includes venues in 6 timezones: `Asia/Singapore`, `Australia/Sydney`, `Australia/Melbourne`, `Europe/London`, `America/New_York`, `Pacific/Auckland` — several of which observe DST.
-
----
-
-## RLS / Authorization Strategy
-
-- **All tables**: RLS enabled
-- **Public read**: Shows, venues, ticket_tiers, organisers
-- **Mutations**: Through `SECURITY DEFINER` RPC functions (bypass RLS, validate internally)
-- **Organiser ownership**: Validated server-side in mutations before DB writes
-- **Service role key**: Only used in server-side code (`src/lib/supabase/admin.ts`)
-- **Browser**: Only has access to anon key
-
-### Trade-off (documented)
-
-In a production system with real auth, RLS policies would use `auth.uid()` to enforce organiser ownership at the DB level. For this demo without real auth, we validate ownership in server actions and use broad RLS policies.
-
----
-
-## Testing Strategy
-
-### 35 tests covering:
-
-**Pricing (15 tests)**
-- Tier price calculations for 100%, 67%, 50%
-- Fractional cent rounding
-- Edge cases (0 price, 1 cent)
-- Booking fee at 6%, cap at $9.00
-- Fee boundary conditions
-- Order total invariant: `total = subtotal + fee`
-
-**Timezone (12 tests)**
-- Singapore (no DST)
-- New York, Sydney, London (DST-observing)
-- Same UTC time → different local displays
-- Countdown formatting
-- Date matching across timezone boundaries
-- Tonight/Tomorrow relative labels
-
-**Availability (8 tests)**
-- All three states: available, temporarily_unavailable, sold_out
-- Boundary conditions
-- Label generation
-
-### Concurrency testing note
-
-True concurrency tests require a running Supabase instance with `Promise.all([createHold(...), createHold(...)])`. The RPC functions are designed to handle this via `SELECT ... FOR UPDATE`, but integration tests are omitted from the unit test suite (they require Docker).
-
----
-
-## UI/UX Decisions
-
-- **Design language**: Independent theatre + modern ticketing
-- **Color palette**: Cream/charcoal/amber — warm, theatrical
-- **Typography**: Display serif for show titles, Inter for body
-- **States**: Distinct designs for loading (skeleton), empty, and error
-- **Availability**: Color-coded badges (green/amber/red) with animated dot
-- **Countdown**: Prominent, pulsing when < 2 minutes, mono font
-- **Responsive**: Mobile-first, sticky ticket selector on desktop
-- **Accessibility**: Keyboard navigation, ARIA labels, focus states, contrast
-
----
-
-## What Was Deliberately Cut
-
-| Feature | Why |
-|---|---|
-| Real auth (login/signup) | Not critical for demonstrating correctness |
-| Organiser create/edit show forms | Scoped to read-only dashboard |
-| Email notifications | Out of scope |
-| Waitlist | P3 feature |
-| Deployment | Local-only demo |
-| End-to-end tests | Requires Playwright setup |
-| Database concurrency integration tests | Requires running Supabase Docker |
-
----
-
-## What I Would Build Next (With Another Day)
-
-1. **Real auth** — Supabase Auth with organiser login, RLS using `auth.uid()`
-2. **Concurrency integration tests** — `Promise.all` holds against real DB
-3. **Organiser CRUD** — Create/edit/deactivate shows
-4. **Optimistic UI** — Instant ticket selection feedback
-5. **Waitlist** — Subscribe to sold-out shows
-6. **Search** — Full-text show search
-7. **Analytics** — Revenue and booking dashboards
-8. **CI/CD** — GitHub Actions with Supabase CLI
-
----
-
-## Known Trade-offs
-
-1. **Admin client for reads**: Using service role for server reads instead of anon+RLS. Simpler for demo, but production should use per-user RLS.
-2. **No real auth**: Organiser selector instead of login. Security relies on server-side validation.
-3. **Availability N+1**: Each show card makes a separate RPC call for availability. In production, use a materialized view or batch query.
-4. **Client-side countdown drift**: `setInterval` may drift slightly from real time. The server is always authoritative at confirmation time.
+1. **Shows are publicly readable to anon, privately scoped to authenticated organisers.** The festival catalogue is public; the _management_ API is not. That matches "even if an API route forgets to filter" for organiser routes.
+2. **No hold sweeper.** Correctness is `now()` in the query. A cron would only tidy row status.
+3. **Service role is not used for organiser or hold paths.** It remains for the integrity guard's fixture setup. Using it in the app would make RLS theatre.

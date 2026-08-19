@@ -1,23 +1,20 @@
 import { z } from 'zod';
-import { createAdminClient } from '@/lib/supabase/admin';
-import type { ShowAvailability } from '@/types/domain';
+import { createAnonClient } from '@/lib/supabase/anon';
+import { isGenuinelyBookable } from '@/domain/availability';
+import { isOnDate } from '@/domain/time';
+import { priceFrom } from '@/domain/pricing';
+import type { ShowAvailability, TicketTier, Venue } from '@/types/domain';
 
 /**
- * find_available_shows — Typed concierge tool.
+ * find_available_shows — typed concierge tool.
  *
- * Uses the SAME availability logic as the UI (get_show_availability RPC).
- * Does NOT duplicate business rules.
- *
- * Returns only genuinely bookable shows:
- * - Active status
- * - Available inventory (not sold out)
- * - Respects active holds
- * - Filters by city, date, max price, minimum seats
+ * Uses get_show_availability (same RPC as the UI). Does not duplicate
+ * inventory rules. Returns only genuinely bookable shows.
  */
 
 export const FindAvailableShowsInput = z.object({
   city: z.string().optional(),
-  onDate: z.string().optional(), // YYYY-MM-DD
+  onDate: z.string().optional(),
   maxPriceMinor: z.number().int().nonnegative().optional(),
   minSeats: z.number().int().positive().optional(),
 });
@@ -32,71 +29,64 @@ export interface AvailableShowResult {
   startsAt: string;
   timezone: string;
   basePriceMinor: number;
+  priceFromMinor: number;
   available: number;
   capacity: number;
+}
+
+interface ShowRow {
+  id: string;
+  title: string;
+  starts_at: string;
+  base_price_minor: number;
+  status: string;
+  venues: Venue;
 }
 
 export async function findAvailableShows(
   params: FindAvailableShowsParams,
 ): Promise<AvailableShowResult[]> {
-  // Validate input
   const input = FindAvailableShowsInput.parse(params);
+  const supabase = createAnonClient();
+  const minSeats = input.minSeats ?? 1;
 
-  const supabase = createAdminClient();
+  const { data: tiers, error: tierError } = await supabase
+    .from('ticket_tiers')
+    .select('percentage');
+  if (tierError) throw new Error(`Failed to fetch tiers: ${tierError.message}`);
+  const percentages = ((tiers as Pick<TicketTier, 'percentage'>[]) ?? []).map((t) => t.percentage);
 
-  // Fetch active shows with venues
-  let query = supabase
+  const { data: shows, error } = await supabase
     .from('shows')
-    .select('*, venues(*)')
+    .select('id, title, starts_at, base_price_minor, status, venues(*)')
     .eq('status', 'active')
     .order('starts_at', { ascending: true });
-
-  // Max price filter
-  if (input.maxPriceMinor !== undefined) {
-    query = query.lte('base_price_minor', input.maxPriceMinor);
-  }
-
-  const { data: shows, error } = await query;
   if (error) throw new Error(`Failed to fetch shows: ${error.message}`);
 
-  // Fetch availability for each show using the same RPC as the UI
   const results: AvailableShowResult[] = [];
 
-  for (const show of shows ?? []) {
+  for (const show of (shows ?? []) as unknown as ShowRow[]) {
     const venue = show.venues;
-
-    // City filter
     if (input.city && venue.city.toLowerCase() !== input.city.toLowerCase()) {
       continue;
     }
 
-    // Date filter (compare in venue timezone)
-    if (input.onDate) {
-      const showDate = new Intl.DateTimeFormat('en-CA', {
-        timeZone: venue.timezone,
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-      }).format(new Date(show.starts_at));
-
-      if (showDate !== input.onDate) continue;
+    if (input.onDate && !isOnDate(show.starts_at, input.onDate, venue.timezone)) {
+      continue;
     }
 
-    // Fetch availability using the same RPC
-    const { data: avail, error: availError } = await supabase.rpc(
-      'get_show_availability',
-      { p_show_id: show.id },
-    );
+    const cheapest = priceFrom(show.base_price_minor, percentages);
+    if (input.maxPriceMinor !== undefined && cheapest > input.maxPriceMinor) {
+      continue;
+    }
 
+    const { data: avail, error: availError } = await supabase.rpc('get_show_availability', {
+      p_show_id: show.id,
+    });
     if (availError) continue;
 
     const availability = avail as ShowAvailability;
-
-    // Skip sold out or unavailable
-    if (availability.status === 'sold_out') continue;
-
-    // Min seats filter
-    if (input.minSeats && availability.available < input.minSeats) continue;
+    if (!isGenuinelyBookable(availability, minSeats)) continue;
 
     results.push({
       id: show.id,
@@ -106,6 +96,7 @@ export async function findAvailableShows(
       startsAt: show.starts_at,
       timezone: venue.timezone,
       basePriceMinor: show.base_price_minor,
+      priceFromMinor: cheapest,
       available: availability.available,
       capacity: availability.capacity,
     });

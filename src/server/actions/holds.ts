@@ -1,16 +1,12 @@
 'use server';
 
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createAnonClient } from '@/lib/supabase/anon';
 import type { CreateHoldResult, ConfirmHoldResult } from '@/types/domain';
 
 /**
  * Create a ticket hold via atomic Postgres RPC.
- *
- * The RPC function uses SELECT ... FOR UPDATE on the show row to serialize
- * concurrent hold requests. This guarantees:
- *   confirmed + active_holds <= capacity
- *
- * The database is the sole authority — React never decides if a hold is allowed.
+ * Called with the anon key — table INSERT on holds is revoked, so the
+ * only path is this SECURITY DEFINER function (SELECT … FOR UPDATE).
  */
 export async function createHold(
   showId: string,
@@ -18,17 +14,14 @@ export async function createHold(
   customerName?: string,
   customerEmail?: string,
 ): Promise<CreateHoldResult> {
-  // Validate inputs server-side
   if (!showId) return { success: false, error: 'INVALID_SHOW' };
   if (!items || items.length === 0) return { success: false, error: 'NO_ITEMS' };
 
   const totalQty = items.reduce((sum, item) => sum + item.quantity, 0);
   if (totalQty <= 0) return { success: false, error: 'INVALID_QUANTITY' };
 
-  // Filter out zero-quantity items
   const filteredItems = items.filter((item) => item.quantity > 0);
-
-  const supabase = createAdminClient();
+  const supabase = createAnonClient();
 
   try {
     const { data, error } = await supabase.rpc('create_hold', {
@@ -39,7 +32,6 @@ export async function createHold(
     });
 
     if (error) {
-      // Map database errors to domain errors
       if (error.message.includes('INSUFFICIENT_INVENTORY')) {
         return { success: false, error: 'INSUFFICIENT_INVENTORY' };
       }
@@ -61,17 +53,6 @@ export async function createHold(
   }
 }
 
-/**
- * Confirm a hold into a booking via atomic Postgres RPC.
- *
- * The RPC function locks the hold row with SELECT ... FOR UPDATE and checks:
- * 1. Hold exists and is active
- * 2. Hold has not expired (expires_at > now() — DB timestamp is authoritative)
- * 3. Creates the booking atomically
- *
- * This handles the race condition where a hold expires at the exact moment
- * of confirmation — the DB transaction decides the winner deterministically.
- */
 export async function confirmHold(
   holdId: string,
   customerName?: string,
@@ -79,7 +60,7 @@ export async function confirmHold(
 ): Promise<ConfirmHoldResult> {
   if (!holdId) return { success: false, error: 'INVALID_HOLD' };
 
-  const supabase = createAdminClient();
+  const supabase = createAnonClient();
 
   try {
     const { data, error } = await supabase.rpc('confirm_hold', {

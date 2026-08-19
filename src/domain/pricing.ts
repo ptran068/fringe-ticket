@@ -46,7 +46,7 @@ export function bookingFee(subtotalMinor: number): number {
 export function calculateOrder(
   basePriceMinor: number,
   tiers: TicketTier[],
-  selections: Record<string, number> // tierId -> quantity
+  selections: Record<string, number>, // tierId -> quantity
 ): OrderSummary {
   const lineItems: OrderLineItem[] = [];
   let subtotalMinor = 0;
@@ -77,6 +77,12 @@ export function calculateOrder(
     feeMinor: fee,
     totalMinor: subtotalMinor + fee,
   };
+}
+
+/** Lowest bookable unit price across the given tiers ("price from"). */
+export function priceFrom(basePriceMinor: number, percentages: number[]): number {
+  if (percentages.length === 0) return basePriceMinor;
+  return Math.min(...percentages.map((pct) => tierPrice(basePriceMinor, pct)));
 }
 
 /** Format minor units as display price: 2000 -> "$20.00" */

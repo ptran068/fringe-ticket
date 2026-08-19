@@ -9,7 +9,7 @@ interface ErrorStateProps {
 }
 
 export function ErrorState({
-  title = "Something went wrong",
+  title = 'Something went wrong',
   description = "We couldn't load this content. Please try again.",
   onRetry,
 }: ErrorStateProps) {

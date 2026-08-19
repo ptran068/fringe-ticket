@@ -13,10 +13,10 @@ export interface ShowAvailability {
 export function calculateAvailability(
   capacity: number,
   sold: number,
-  held: number
+  held: number,
 ): ShowAvailability {
   const available = Math.max(0, capacity - sold - held);
-  
+
   let status: AvailabilityStatus;
   if (sold >= capacity) {
     status = 'sold_out';
@@ -27,6 +27,11 @@ export function calculateAvailability(
   }
 
   return { capacity, sold, held, available, status };
+}
+
+/** True when a customer can actually complete a hold for minSeats tickets. */
+export function isGenuinelyBookable(availability: ShowAvailability, minSeats = 1): boolean {
+  return availability.status === 'available' && availability.available >= minSeats;
 }
 
 /** Human-readable availability label */

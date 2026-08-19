@@ -19,7 +19,8 @@ export function TicketSelector({ show, availability, tiers }: TicketSelectorProp
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const isDisabled = availability.status === 'sold_out' || availability.status === 'temporarily_unavailable';
+  const isDisabled =
+    availability.status === 'sold_out' || availability.status === 'temporarily_unavailable';
   const totalQty = Object.values(selections).reduce((a, b) => a + b, 0);
 
   const order = calculateOrder(
@@ -145,7 +146,10 @@ export function TicketSelector({ show, availability, tiers }: TicketSelectorProp
 
       {/* Error */}
       {error && (
-        <div className="bg-coral/10 border border-coral/20 rounded-lg p-3 text-sm text-coral animate-fade-in" role="alert">
+        <div
+          className="bg-coral/10 border border-coral/20 rounded-lg p-3 text-sm text-coral animate-fade-in"
+          role="alert"
+        >
           {error}
         </div>
       )}

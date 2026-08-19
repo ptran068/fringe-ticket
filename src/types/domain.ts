@@ -18,6 +18,13 @@ export interface Organiser {
   email: string;
 }
 
+export const DEMO_ORGANISERS = [
+  { email: 'hello@fringemavericks.com', name: 'Fringe Mavericks' },
+  { email: 'contact@undergroundarts.org', name: 'Underground Arts' },
+] as const;
+
+export const DEMO_ORGANISER_PASSWORD = 'fringe-demo-2026';
+
 /** Show status */
 export type ShowStatus = 'active' | 'inactive';
 
@@ -58,6 +65,7 @@ export interface ShowAvailability {
 /** Show with availability (for browsing) */
 export interface ShowWithAvailability extends Show {
   availability: ShowAvailability;
+  price_from_minor?: number;
 }
 
 /** Hold status */

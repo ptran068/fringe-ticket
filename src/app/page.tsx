@@ -17,12 +17,11 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
   const filters: ShowFiltersType = {
     city: typeof params.city === 'string' ? params.city : undefined,
-    availability: typeof params.availability === 'string'
-      ? params.availability as ShowFiltersType['availability']
-      : undefined,
-    sort: typeof params.sort === 'string'
-      ? params.sort as ShowFiltersType['sort']
-      : 'starts_at',
+    availability:
+      typeof params.availability === 'string'
+        ? (params.availability as ShowFiltersType['availability'])
+        : undefined,
+    sort: typeof params.sort === 'string' ? (params.sort as ShowFiltersType['sort']) : 'starts_at',
     page: typeof params.page === 'string' ? parseInt(params.page, 10) : 1,
   };
 

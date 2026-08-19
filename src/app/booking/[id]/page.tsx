@@ -2,8 +2,12 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getBooking } from '@/server/repositories/shows';
 import { formatPrice } from '@/domain/pricing';
+import { encodeTicketQr } from '@/domain/ticket';
 import { formatShowTime } from '@/domain/time';
+import { renderTicketQrSvg } from '@/lib/qr';
 import { Button } from '@/components/ui/button';
+import { SaveTicket } from '@/components/tickets/save-ticket';
+import { TicketPass } from '@/components/tickets/ticket-pass';
 
 interface BookingPageProps {
   params: Promise<{ id: string }>;
@@ -17,12 +21,20 @@ export default async function BookingPage({ params }: BookingPageProps) {
 
   const show = booking.shows;
   const venue = show.venues;
+  const payload = encodeTicketQr({ reference: booking.reference, bookingId: booking.id });
+  const qrSvg = await renderTicketQrSvg(payload);
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
       <div className="text-center mb-8 animate-slide-up">
         <div className="w-20 h-20 rounded-full bg-emerald/10 flex items-center justify-center mx-auto mb-6">
-          <svg className="w-10 h-10 text-emerald" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+          <svg
+            className="w-10 h-10 text-emerald"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={2}
+            stroke="currentColor"
+          >
             <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
           </svg>
         </div>
@@ -35,12 +47,36 @@ export default async function BookingPage({ params }: BookingPageProps) {
         </p>
       </div>
 
+      <div className="bg-white rounded-xl border border-charcoal/5 p-6 mb-6 shadow-card animate-fade-in text-center">
+        <TicketPass payload={payload} reference={booking.reference} svg={qrSvg} />
+        <div className="mt-4">
+          <SaveTicket
+            ticket={{
+              bookingId: booking.id,
+              reference: booking.reference,
+              showTitle: show.title,
+              venueName: venue.name,
+              venueCity: venue.city,
+              timezone: venue.timezone,
+              startsAt: show.starts_at,
+              items: booking.booking_items.map((item) => ({
+                label: item.ticket_tiers.label,
+                quantity: item.quantity,
+              })),
+              totalMinor: booking.total_minor,
+            }}
+          />
+        </div>
+      </div>
+
       <div className="bg-white rounded-xl border border-charcoal/5 p-6 mb-6 shadow-card animate-fade-in">
         <h2 className="font-[family-name:var(--font-display)] text-xl font-bold text-charcoal mb-3">
           {show.title}
         </h2>
         <div className="text-sm text-slate space-y-1">
-          <p>{venue.name}, {venue.city}</p>
+          <p>
+            {venue.name}, {venue.city}
+          </p>
           <p>{formatShowTime(show.starts_at, venue.timezone)}</p>
         </div>
       </div>
@@ -50,10 +86,14 @@ export default async function BookingPage({ params }: BookingPageProps) {
           Order Details
         </h3>
         <div className="space-y-3">
-          {booking.booking_items.map((item: { tier_id: string; quantity: number; line_total_minor: number; ticket_tiers: { label: string } }) => (
+          {booking.booking_items.map((item) => (
             <div key={item.tier_id} className="flex justify-between text-sm">
-              <span className="text-slate">{item.quantity} × {item.ticket_tiers.label}</span>
-              <span className="text-charcoal font-medium">{formatPrice(item.line_total_minor)}</span>
+              <span className="text-slate">
+                {item.quantity} × {item.ticket_tiers.label}
+              </span>
+              <span className="text-charcoal font-medium">
+                {formatPrice(item.line_total_minor)}
+              </span>
             </div>
           ))}
           <div className="border-t border-charcoal/5 pt-3 space-y-2">
@@ -73,7 +113,10 @@ export default async function BookingPage({ params }: BookingPageProps) {
         </div>
       </div>
 
-      <div className="text-center">
+      <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
+        <Link href="/tickets">
+          <Button>My tickets</Button>
+        </Link>
         <Link href="/">
           <Button variant="secondary">Browse more shows</Button>
         </Link>

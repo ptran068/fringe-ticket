@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { calculateAvailability, availabilityLabel } from '@/domain/availability';
+import {
+  calculateAvailability,
+  availabilityLabel,
+  isGenuinelyBookable,
+} from '@/domain/availability';
 
 describe('Availability Module', () => {
   describe('calculateAvailability', () => {
@@ -61,16 +65,39 @@ describe('Availability Module', () => {
 
   describe('availabilityLabel', () => {
     it('returns correct label for available', () => {
-      expect(availabilityLabel({ status: 'available', available: 5, capacity: 100, sold: 95, held: 0 })).toBe('5 tickets left');
-      expect(availabilityLabel({ status: 'available', available: 1, capacity: 100, sold: 99, held: 0 })).toBe('1 ticket left');
+      expect(
+        availabilityLabel({ status: 'available', available: 5, capacity: 100, sold: 95, held: 0 }),
+      ).toBe('5 tickets left');
+      expect(
+        availabilityLabel({ status: 'available', available: 1, capacity: 100, sold: 99, held: 0 }),
+      ).toBe('1 ticket left');
     });
 
     it('returns correct label for temporarily unavailable', () => {
-      expect(availabilityLabel({ status: 'temporarily_unavailable', available: 0, capacity: 100, sold: 90, held: 10 })).toBe('Temporarily held — try again shortly');
+      expect(
+        availabilityLabel({
+          status: 'temporarily_unavailable',
+          available: 0,
+          capacity: 100,
+          sold: 90,
+          held: 10,
+        }),
+      ).toBe('Temporarily held — try again shortly');
     });
 
     it('returns correct label for sold out', () => {
-      expect(availabilityLabel({ status: 'sold_out', available: 0, capacity: 100, sold: 100, held: 0 })).toBe('Sold out');
+      expect(
+        availabilityLabel({ status: 'sold_out', available: 0, capacity: 100, sold: 100, held: 0 }),
+      ).toBe('Sold out');
+    });
+  });
+
+  describe('isGenuinelyBookable', () => {
+    it('is true only when status is available and enough seats remain', () => {
+      expect(isGenuinelyBookable(calculateAvailability(10, 0, 0), 1)).toBe(true);
+      expect(isGenuinelyBookable(calculateAvailability(10, 9, 1), 1)).toBe(false);
+      expect(isGenuinelyBookable(calculateAvailability(10, 10, 0), 1)).toBe(false);
+      expect(isGenuinelyBookable(calculateAvailability(10, 0, 0), 11)).toBe(false);
     });
   });
 });

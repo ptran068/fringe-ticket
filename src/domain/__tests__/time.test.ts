@@ -5,6 +5,9 @@ import {
   relativeShowDay,
   formatCountdown,
   isOnDate,
+  addCalendarDay,
+  fromVenueDatetimeLocal,
+  toVenueDatetimeLocal,
 } from '@/domain/time';
 
 describe('Time Module', () => {
@@ -49,7 +52,7 @@ describe('Time Module', () => {
       expect(formatShowTimeOnly(winterDate, 'Australia/Sydney')).toBe('10:00 pm');
     });
   });
-  
+
   describe('relativeShowDay', () => {
     beforeEach(() => {
       // Mock new Date() to always return a fixed time for relative day tests
@@ -64,7 +67,7 @@ describe('Time Module', () => {
     it('returns Tonight for same day in venue timezone', () => {
       // Current mock time is 20:00 SGT (Aug 15)
       // Show is at 22:00 SGT (Aug 15)
-      const showDate = new Date('2026-08-15T14:00:00Z'); 
+      const showDate = new Date('2026-08-15T14:00:00Z');
       expect(relativeShowDay(showDate, 'Asia/Singapore')).toBe('Tonight');
     });
 
@@ -87,12 +90,38 @@ describe('Time Module', () => {
     it('formats various remaining times', () => {
       expect(formatCountdown(90000)).toBe('01:30'); // 90 secs
       expect(formatCountdown(3600000)).toBe('60:00'); // 1 hour
-      expect(formatCountdown(582000)).toBe('09:42'); 
+      expect(formatCountdown(582000)).toBe('09:42');
     });
 
     it('formats zero or negative remaining times as 00:00', () => {
       expect(formatCountdown(0)).toBe('00:00');
       expect(formatCountdown(-5000)).toBe('00:00');
+    });
+  });
+
+  describe('addCalendarDay', () => {
+    it('crosses month boundaries in UTC, not the host timezone', () => {
+      expect(addCalendarDay('2026-08-31')).toBe('2026-09-01');
+    });
+  });
+
+  describe('venue datetime-local round-trip', () => {
+    it('interprets Sydney winter wall clock as UTC+10', () => {
+      expect(fromVenueDatetimeLocal('2026-08-19T20:00', 'Australia/Sydney')).toBe(
+        '2026-08-19T10:00:00.000Z',
+      );
+    });
+
+    it('interprets New York summer wall clock as UTC-4', () => {
+      expect(fromVenueDatetimeLocal('2026-08-23T20:00', 'America/New_York')).toBe(
+        '2026-08-24T00:00:00.000Z',
+      );
+    });
+
+    it('round-trips Sydney DST (AEDT, UTC+11)', () => {
+      const iso = fromVenueDatetimeLocal('2026-01-15T20:00', 'Australia/Sydney');
+      expect(iso).toBe('2026-01-15T09:00:00.000Z');
+      expect(toVenueDatetimeLocal(iso, 'Australia/Sydney')).toBe('2026-01-15T20:00');
     });
   });
 
