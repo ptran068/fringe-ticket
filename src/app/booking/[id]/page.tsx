@@ -4,6 +4,7 @@ import { getBooking } from '@/server/repositories/shows';
 import { formatPrice } from '@/domain/pricing';
 import { encodeTicketQr } from '@/domain/ticket';
 import { formatShowTime } from '@/domain/time';
+import { getRequestOrigin } from '@/lib/origin';
 import { renderTicketQrSvg } from '@/lib/qr';
 import { Button } from '@/components/ui/button';
 import { SaveTicket } from '@/components/tickets/save-ticket';
@@ -21,7 +22,8 @@ export default async function BookingPage({ params }: BookingPageProps) {
 
   const show = booking.shows;
   const venue = show.venues;
-  const payload = encodeTicketQr({ reference: booking.reference, bookingId: booking.id });
+  const origin = await getRequestOrigin();
+  const payload = encodeTicketQr({ origin, bookingId: booking.id });
   const qrSvg = await renderTicketQrSvg(payload);
 
   return (

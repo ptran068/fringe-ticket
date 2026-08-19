@@ -47,7 +47,10 @@ function TicketCard({
   ticket: WalletTicket;
   onRemove: (bookingId: string) => void;
 }) {
-  const payload = encodeTicketQr({ reference: ticket.reference, bookingId: ticket.bookingId });
+  const payload = encodeTicketQr({
+    origin: window.location.origin,
+    bookingId: ticket.bookingId,
+  });
   const upcoming = isUpcomingTicket(ticket);
 
   return (

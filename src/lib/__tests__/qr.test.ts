@@ -5,7 +5,7 @@ import { renderTicketQrSvg } from '@/lib/qr';
 describe('ticket QR rendering', () => {
   it('renders an svg for a booking payload', async () => {
     const payload = encodeTicketQr({
-      reference: 'FRG-45A717',
+      origin: 'http://localhost:3000',
       bookingId: 'e613c5e3-adec-4497-9195-f9d25c1fb362',
     });
     const svg = await renderTicketQrSvg(payload);

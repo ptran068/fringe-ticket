@@ -65,7 +65,7 @@ export function TicketPass({ payload, reference, svg: svgProp, size = 'lg' }: Ti
         <p className="mt-3 font-mono text-sm font-bold tracking-wider text-amber-dark">
           {reference}
         </p>
-        <p className="mt-1 text-xs text-slate">Show this code at the door</p>
+        <p className="mt-1 text-xs text-slate">Scan to open this ticket</p>
         <Button variant="ghost" size="sm" className="mt-2" onClick={() => setEnlarged(true)}>
           Enlarge for scanning
         </Button>
