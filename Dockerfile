@@ -21,7 +21,10 @@ RUN npm run build
 FROM nginx:stable-alpine
 WORKDIR /app
 
-RUN apk add --no-cache nodejs libc6-compat
+# Alpine's nodejs uses system ICU. Without icu-data-full, en-CA date
+# strings can be M/D/YYYY and Date#toISOString throws RangeError.
+RUN apk add --no-cache nodejs icu-data-full tzdata libc6-compat
+ENV TZ=UTC
 
 COPY --from=build /app/public ./public
 COPY --from=build /app/.next/standalone ./

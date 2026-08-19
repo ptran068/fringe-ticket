@@ -40,6 +40,10 @@ describe('Time Module', () => {
       const timeSydney = formatShowTime(fixedDate, 'Australia/Sydney');
       expect(timeNewYork).not.toEqual(timeSydney);
     });
+
+    it('formats a Postgres-style timestamp with a space separator', () => {
+      expect(formatShowTimeOnly('2026-08-15 12:00:00+00', 'Asia/Singapore')).toBe('8:00 pm');
+    });
   });
 
   describe('DST tests', () => {
@@ -103,6 +107,11 @@ describe('Time Module', () => {
   describe('addCalendarDay', () => {
     it('crosses month boundaries in UTC, not the host timezone', () => {
       expect(addCalendarDay('2026-08-31')).toBe('2026-09-01');
+    });
+
+    it('rejects locale-formatted dates instead of calling toISOString on Invalid Date', () => {
+      expect(() => addCalendarDay('8/19/2026')).toThrow(RangeError);
+      expect(() => addCalendarDay('19/08/2026')).toThrow(RangeError);
     });
   });
 
