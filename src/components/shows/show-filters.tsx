@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { IconChevronDown, IconClose, IconPin, IconSearch } from '@/components/ui/icons';
+import { IconChevronDown, IconClose, IconSearch } from '@/components/ui/icons';
 import type { Venue } from '@/types/domain';
 
 interface ShowFiltersProps {
@@ -10,7 +10,7 @@ interface ShowFiltersProps {
 }
 
 const AVAILABILITY = [
-  { value: 'all', label: 'All' },
+  { value: 'all', label: 'All availability' },
   { value: 'available', label: 'Available' },
   { value: 'temporarily_unavailable', label: 'Held' },
   { value: 'sold_out', label: 'Sold out' },
@@ -18,8 +18,8 @@ const AVAILABILITY = [
 
 const SORT_OPTIONS = [
   { value: 'starts_at', label: 'Soonest' },
-  { value: 'price_asc', label: 'Price: low to high' },
-  { value: 'price_desc', label: 'Price: high to low' },
+  { value: 'price_asc', label: 'Lowest price' },
+  { value: 'price_desc', label: 'Highest price' },
 ] as const;
 
 const SEARCH_DEBOUNCE_MS = 350;
@@ -58,7 +58,6 @@ export function ShowFilters({ venues }: ShowFiltersProps) {
     [venues],
   );
 
-  const selectedVenue = venues.find((v) => v.id === currentVenue);
   const locationValue = currentVenue
     ? `venue:${currentVenue}`
     : currentCity !== 'all'
@@ -140,22 +139,25 @@ export function ShowFilters({ venues }: ShowFiltersProps) {
   };
 
   const fieldClass =
-    'appearance-none w-full bg-white border border-charcoal/10 rounded-xl px-3.5 py-2.5 text-sm font-medium text-charcoal shadow-sm hover:border-charcoal/20 focus:border-amber focus:outline-none focus:ring-2 focus:ring-amber/20 transition-colors';
+    'appearance-none w-full h-11 bg-white border border-charcoal/10 rounded-xl px-3.5 text-sm text-charcoal placeholder:text-slate-light hover:border-charcoal/20 focus:border-amber focus:outline-none focus:ring-2 focus:ring-amber/20 transition-colors';
+
+  const selectClass = `${fieldClass} cursor-pointer truncate pr-8`;
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-nowrap items-center gap-2">
       <form
         role="search"
+        className="min-w-0 flex-1"
         onSubmit={(e) => {
           e.preventDefault();
           flushQuery();
         }}
       >
         <label htmlFor="show-search" className="sr-only">
-          Search shows by name
+          Filter by show name
         </label>
         <div className="relative">
-          <IconSearch className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate" />
+          <IconSearch className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-light" />
           <input
             id="show-search"
             type="search"
@@ -164,7 +166,7 @@ export function ShowFilters({ venues }: ShowFiltersProps) {
               setQuery(e.target.value);
               scheduleQuery(e.target.value);
             }}
-            placeholder="Search by show name"
+            placeholder="Filter by show name..."
             autoComplete="off"
             maxLength={80}
             className={`${fieldClass} pl-10 pr-10 [&::-webkit-search-cancel-button]:hidden`}
@@ -178,7 +180,7 @@ export function ShowFilters({ venues }: ShowFiltersProps) {
                 updateFilters({ q: null });
               }}
               aria-label="Clear search"
-              className="absolute right-2.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-slate hover:bg-charcoal/5 hover:text-charcoal cursor-pointer"
+              className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-slate hover:bg-charcoal/5 hover:text-charcoal cursor-pointer"
             >
               <IconClose className="h-3.5 w-3.5" />
             </button>
@@ -186,152 +188,110 @@ export function ShowFilters({ venues }: ShowFiltersProps) {
         </div>
       </form>
 
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:gap-4">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:min-w-0 lg:flex-1">
-          <div className="relative min-w-0">
-            <label
-              htmlFor="location-filter"
-              className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate"
-            >
-              Location
-            </label>
-            <IconPin className="pointer-events-none absolute left-3.5 bottom-3 h-4 w-4 text-slate" />
-            <select
-              id="location-filter"
-              value={locationValue}
-              onChange={(e) => onLocationChange(e.target.value)}
-              className={`${fieldClass} cursor-pointer pl-10 pr-9`}
-            >
-              <option value="all">All locations</option>
-              <optgroup label="Cities">
-                {cities.map((city) => (
-                  <option key={city} value={`city:${city}`}>
-                    {city}
-                  </option>
-                ))}
-              </optgroup>
-              <optgroup label="Venues">
-                {sortedVenues.map((venue) => (
-                  <option key={venue.id} value={`venue:${venue.id}`}>
-                    {venue.name} · {venue.city}
-                  </option>
-                ))}
-              </optgroup>
-            </select>
-            <IconChevronDown className="pointer-events-none absolute right-3 bottom-3 h-4 w-4 text-slate" />
-          </div>
+      <FilterSelect
+        id="availability-filter"
+        label="Availability"
+        value={currentAvailability}
+        muted={currentAvailability === 'all'}
+        onChange={(value) => updateFilters({ availability: value })}
+        widthClass="w-[9.75rem] sm:w-[11rem]"
+        selectClass={selectClass}
+      >
+        {AVAILABILITY.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </FilterSelect>
 
-          <div className="relative min-w-0">
-            <label
-              htmlFor="sort-filter"
-              className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate"
-            >
-              Sort
-            </label>
-            <select
-              id="sort-filter"
-              value={currentSort}
-              onChange={(e) => updateFilters({ sort: e.target.value })}
-              className={`${fieldClass} cursor-pointer pr-9`}
-            >
-              {SORT_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <IconChevronDown className="pointer-events-none absolute right-3 bottom-3 h-4 w-4 text-slate" />
-          </div>
-        </div>
+      <FilterSelect
+        id="location-filter"
+        label="Location"
+        value={locationValue}
+        muted={locationValue === 'all'}
+        onChange={onLocationChange}
+        widthClass="w-[7.5rem] sm:w-[8.25rem]"
+        selectClass={selectClass}
+      >
+        <option value="all">All locations</option>
+        <optgroup label="Cities">
+          {cities.map((city) => (
+            <option key={city} value={`city:${city}`}>
+              {city}
+            </option>
+          ))}
+        </optgroup>
+        <optgroup label="Venues">
+          {sortedVenues.map((venue) => (
+            <option key={venue.id} value={`venue:${venue.id}`}>
+              {venue.name} · {venue.city}
+            </option>
+          ))}
+        </optgroup>
+      </FilterSelect>
 
-        <div className="lg:pb-px">
-          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate">
-            Availability
-          </p>
-          <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Availability">
-            {AVAILABILITY.map((option) => {
-              const active = currentAvailability === option.value;
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => updateFilters({ availability: option.value })}
-                  aria-pressed={active}
-                  className={`rounded-full px-3.5 py-2 text-sm font-medium transition-colors cursor-pointer ${
-                    active
-                      ? 'bg-charcoal text-white shadow-card'
-                      : 'bg-white text-slate ring-1 ring-charcoal/10 hover:text-charcoal hover:ring-charcoal/20'
-                  }`}
-                >
-                  {option.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
+      <FilterSelect
+        id="sort-filter"
+        label="Sort"
+        value={currentSort}
+        muted={currentSort === 'starts_at'}
+        onChange={(value) => updateFilters({ sort: value })}
+        widthClass="w-[6.75rem] sm:w-[7.5rem]"
+        selectClass={selectClass}
+      >
+        {SORT_OPTIONS.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </FilterSelect>
 
       {hasFilters && (
-        <div className="flex flex-wrap items-center gap-2 border-t border-charcoal/6 pt-3">
-          {currentQuery.trim() && (
-            <FilterChip
-              label={`“${currentQuery.trim()}”`}
-              onRemove={() => {
-                setQuery('');
-                if (debounceRef.current) clearTimeout(debounceRef.current);
-                updateFilters({ q: null });
-              }}
-            />
-          )}
-          {selectedVenue && (
-            <FilterChip
-              label={`${selectedVenue.name}, ${selectedVenue.city}`}
-              onRemove={() => updateFilters({ venue: null, city: null })}
-            />
-          )}
-          {!selectedVenue && currentCity !== 'all' && (
-            <FilterChip label={currentCity} onRemove={() => updateFilters({ city: null })} />
-          )}
-          {currentAvailability !== 'all' && (
-            <FilterChip
-              label={
-                AVAILABILITY.find((option) => option.value === currentAvailability)?.label ??
-                currentAvailability
-              }
-              onRemove={() => updateFilters({ availability: null })}
-            />
-          )}
-          {currentSort !== 'starts_at' && (
-            <FilterChip
-              label={
-                SORT_OPTIONS.find((option) => option.value === currentSort)?.label ?? currentSort
-              }
-              onRemove={() => updateFilters({ sort: null })}
-            />
-          )}
-          <button
-            type="button"
-            onClick={clearFilters}
-            className="ml-auto text-sm font-medium text-slate underline-offset-4 hover:text-charcoal hover:underline cursor-pointer"
-          >
-            Clear all
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={clearFilters}
+          className="shrink-0 px-1 text-sm font-medium text-slate hover:text-charcoal cursor-pointer"
+        >
+          Clear
+        </button>
       )}
     </div>
   );
 }
 
-function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }) {
+function FilterSelect({
+  id,
+  label,
+  value,
+  muted,
+  onChange,
+  widthClass,
+  selectClass,
+  children,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  muted?: boolean;
+  onChange: (value: string) => void;
+  widthClass: string;
+  selectClass: string;
+  children: React.ReactNode;
+}) {
   return (
-    <button
-      type="button"
-      onClick={onRemove}
-      className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-charcoal/6 py-1 pl-3 pr-2 text-sm text-charcoal transition-colors hover:bg-charcoal/10 cursor-pointer"
-    >
-      <span className="truncate">{label}</span>
-      <IconClose className="h-3 w-3 shrink-0 text-slate" />
-      <span className="sr-only">Remove filter</span>
-    </button>
+    <div className={`relative shrink-0 ${widthClass}`}>
+      <label htmlFor={id} className="sr-only">
+        {label}
+      </label>
+      <select
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={`${selectClass} ${muted ? 'text-slate' : ''}`}
+      >
+        {children}
+      </select>
+      <IconChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate" />
+    </div>
   );
 }

@@ -52,7 +52,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       </section>
 
       <div className="page-wrap py-8 sm:py-10">
-        <div className="mb-8 rounded-2xl border border-charcoal/8 bg-white/70 p-4 shadow-card backdrop-blur-sm sm:p-5">
+        <div className="mb-8">
           <Suspense fallback={null}>
             <ShowFilters venues={venues} />
           </Suspense>
