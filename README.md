@@ -17,9 +17,7 @@ Next.js 16 (App Router) · React 19 · TypeScript strict · Tailwind v4 · Supab
 ```bash
 cp .env.example .env.local   # local demo keys for `supabase start`
 npm install
-npx supabase start           # requires Docker Desktop
-npm run db:reset
-npm run verify               # needs the database from the previous two steps
+npm run verify
 npm run dev
 ```
 
@@ -42,8 +40,10 @@ Sign in at `/organiser/login`. Each organiser can create and edit **their** show
 
 1. Browse shows (10 per page). Filter by city / availability. Times are in the **venue** timezone (Sydney, Edinburgh, New York, Singapore, …), not the browser's.
 2. Hold tickets, watch the 10-minute countdown, confirm — or wait it out and see inventory come back.
-3. Sold out vs temporarily held: a full house of _other people's baskets_ is not sold out.
-4. Sign in as Mavericks, note a show id, sign in as Underground, open `/organiser/shows/<that-id>/edit` — you should get 404. The database refused the read.
+3. After confirm, a QR encodes the booking URL (`/booking/{id}`). Scan it with a camera to open the ticket. A phone cannot reach `localhost` on your laptop — use the same device, or open the app via your LAN IP.
+4. **My Tickets** (header) lists bookings saved on this browser so you can show the QR later. Clearing site data removes them; it does not cancel the booking.
+5. Sold out vs temporarily held: a full house of _other people's baskets_ is not sold out.
+6. Sign in as Mavericks, note a show id, sign in as Underground, open `/organiser/shows/<that-id>/edit` — you should get 404. The database refused the read.
 
 ## Commands
 
@@ -54,7 +54,6 @@ npm run typecheck
 npm run lint
 npm run integrity    # Oversell, expiry, timezone, RLS
 npm run verify       # lint + types + format + test + integrity
-npm run db:reset     # migrations + seed
 ```
 
 CI runs `npm run verify` after `supabase start`. Do not delete `scripts/integrity-guard.ts` to go green.
@@ -62,10 +61,11 @@ CI runs `npm run verify` after `supabase start`. Do not delete `scripts/integrit
 ## Layout
 
 ```
-src/domain/       Pure pricing, availability, timezone (no DB)
+src/domain/       Pure pricing, availability, timezone, ticket QR URLs (no DB)
 src/server/       Repositories + actions
 src/tools/        find_available_shows (Zod, same availability RPC as the UI)
-src/app/          App Router
+src/app/          App Router (browse, checkout, booking QR, /tickets, organiser)
+src/lib/          Ticket wallet (versioned localStorage) + QR SVG
 supabase/         Schema, RPCs, seed, RLS
 ```
 
