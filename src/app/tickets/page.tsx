@@ -13,7 +13,7 @@ export default function TicketsPage() {
       <PageHeader
         kicker="At the door"
         title="My Tickets"
-        description="Show the QR code from this device at the door. Clearing site data removes this list; it does not cancel the booking."
+        description="Pending reservations appear at the top so you can finish checkout. Confirmed tickets on this device show the QR code at the door."
       />
       <TicketWallet />
     </div>

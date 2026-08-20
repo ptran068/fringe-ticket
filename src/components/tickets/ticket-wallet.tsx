@@ -4,8 +4,7 @@ import { useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { TicketPass } from '@/components/tickets/ticket-pass';
 import { Button } from '@/components/ui/button';
-import { EmptyState } from '@/components/ui/empty-state';
-import { IconClock, IconPin, IconTicket } from '@/components/ui/icons';
+import { IconClock, IconPin } from '@/components/ui/icons';
 import { formatPrice } from '@/domain/pricing';
 import { encodeTicketQr } from '@/domain/ticket';
 import { formatShowTime } from '@/domain/time';
@@ -26,14 +25,6 @@ import {
   subscribePendingHold,
 } from '@/lib/pending-hold';
 import { PendingHoldCard } from '@/components/tickets/pending-hold-card';
-
-function TicketIcon() {
-  return (
-    <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-charcoal/5">
-      <IconTicket className="h-8 w-8 text-slate-light" />
-    </div>
-  );
-}
 
 function TicketCard({
   ticket,
@@ -125,21 +116,6 @@ export function TicketWallet() {
     );
   }
 
-  if (tickets.length === 0 && !pending) {
-    return (
-      <EmptyState
-        icon={<TicketIcon />}
-        title="No tickets on this device"
-        description="When you confirm a booking, the ticket is saved here so you can show the QR code at the door."
-        action={
-          <Link href="/">
-            <Button variant="secondary">Browse shows</Button>
-          </Link>
-        }
-      />
-    );
-  }
-
   const upcoming = tickets.filter((ticket) => isUpcomingTicket(ticket));
   const past = tickets
     .filter((ticket) => !isUpcomingTicket(ticket))
@@ -148,14 +124,25 @@ export function TicketWallet() {
 
   return (
     <div className="space-y-8">
-      {pending && (
-        <section className="space-y-4">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate">
-            Finish booking
-          </h2>
+      <section className="space-y-4">
+        <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate">Pending</h2>
+        {pending ? (
           <PendingHoldCard hold={pending} />
-        </section>
-      )}
+        ) : (
+          <div className="rounded-2xl border border-dashed border-charcoal/12 bg-white/50 px-5 py-6">
+            <p className="text-sm font-semibold text-charcoal">No reservation in progress</p>
+            <p className="mt-1 text-sm leading-relaxed text-slate">
+              Hold tickets on a show, then come back here to finish checkout before the 10-minute
+              timer ends.
+            </p>
+            <Link href="/" className="mt-4 inline-flex">
+              <Button variant="secondary" size="sm">
+                Browse shows
+              </Button>
+            </Link>
+          </div>
+        )}
+      </section>
       {upcoming.length > 0 && (
         <section className="space-y-4">
           <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate">Upcoming</h2>

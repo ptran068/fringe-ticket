@@ -57,6 +57,17 @@ describe('pending hold', () => {
     expect(getPendingHold(storage, now)?.showTitle).toBe('The Last Bus Home');
   });
 
+  it('saves seeded show ids that are not RFC 4122 UUIDs', () => {
+    const storage = new MemoryStorage();
+    const result = savePendingHold(
+      hold({ showId: '20000000-0000-0000-0000-000000000001' }),
+      storage,
+    );
+    expect(result).toEqual({ ok: true });
+    const now = Date.parse('2026-08-20T01:55:00.000Z');
+    expect(getPendingHold(storage, now)?.showId).toBe('20000000-0000-0000-0000-000000000001');
+  });
+
   it('replaces a previous hold instead of stacking', () => {
     const storage = new MemoryStorage();
     savePendingHold(hold(), storage);

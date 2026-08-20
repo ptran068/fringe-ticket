@@ -7,11 +7,16 @@ const isoTimestamp = z.string().refine((value) => !Number.isNaN(Date.parse(value
   message: 'Invalid timestamp',
 });
 
+/** Postgres uuid values (including seeded 0000-version ids) — not RFC 4122. */
+const postgresUuid = z
+  .string()
+  .regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, 'Invalid id');
+
 const pendingHoldSchema = z.object({
   v: z.literal(1),
-  holdId: z.string().uuid(),
+  holdId: postgresUuid,
   expiresAt: isoTimestamp,
-  showId: z.string().uuid(),
+  showId: postgresUuid,
   showTitle: z.string().min(1),
   venueName: z.string().min(1),
   venueCity: z.string().min(1),
