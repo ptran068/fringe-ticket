@@ -7,6 +7,7 @@ loadEnvFiles(['.env.local', '.env.example']);
 
 export default defineConfig({
   plugins: [tsconfigPaths(), react()],
+  envPrefix: ['VITE_', 'NEXT_PUBLIC_'],
   test: {
     globals: true,
     include: ['**/*.test.{ts,tsx}'],

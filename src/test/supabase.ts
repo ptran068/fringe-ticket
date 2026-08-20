@@ -3,28 +3,32 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 loadEnvFiles(['.env.local', '.env.example']);
 
-export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
-export const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
-export const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
+/** Bracket access so Vite does not inline empty NEXT_PUBLIC_* values in CI. */
+function env(name: string): string {
+  return process.env[name] ?? '';
+}
 
 export const ORG_A = '00000000-0000-0000-0000-000000000001';
 
 export function adminClient(): SupabaseClient {
-  return createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+  return createClient(env('NEXT_PUBLIC_SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'), {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
 
 export function anonClient(): SupabaseClient {
-  return createClient(SUPABASE_URL, ANON_KEY, {
+  return createClient(env('NEXT_PUBLIC_SUPABASE_URL'), env('NEXT_PUBLIC_SUPABASE_ANON_KEY'), {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
 
 export async function dbAvailable(): Promise<boolean> {
+  const url = env('NEXT_PUBLIC_SUPABASE_URL');
+  const key = env('SUPABASE_SERVICE_ROLE_KEY');
+  if (!url || !key) return false;
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/`, {
-      headers: { apikey: SERVICE_ROLE_KEY },
+    const res = await fetch(`${url}/rest/v1/`, {
+      headers: { apikey: key },
     });
     return res.ok || res.status === 401;
   } catch {

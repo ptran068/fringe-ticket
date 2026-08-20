@@ -22,12 +22,14 @@ describe('find_available_shows input', () => {
 });
 
 describe.skipIf(!hasDb)('inventory RPCs (live Postgres)', () => {
-  const supabase = adminClient();
-  const publicClient = anonClient();
+  let supabase: ReturnType<typeof adminClient>;
+  let publicClient: ReturnType<typeof anonClient>;
   let venueId = '';
   let showId = '';
 
   beforeAll(async () => {
+    supabase = adminClient();
+    publicClient = anonClient();
     const fixture = await createCapacityOneShow(supabase);
     venueId = fixture.venueId;
     showId = fixture.showId;
@@ -55,10 +57,9 @@ describe.skipIf(!hasDb)('inventory RPCs (live Postgres)', () => {
 });
 
 describe.skipIf(!hasDb)('hold expiry (live Postgres)', () => {
-  const supabase = adminClient();
-  const publicClient = anonClient();
-
   it('does not count an unswept expired hold against capacity', async () => {
+    const supabase = adminClient();
+    const publicClient = anonClient();
     const { venueId, showId } = await createCapacityOneShow(supabase);
     try {
       await supabase.from('holds').insert({
