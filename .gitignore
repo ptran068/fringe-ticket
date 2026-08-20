@@ -33,6 +33,11 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# supabase CLI (nested supabase/.gitignore also lists these; root copy
+# is what Prettier reads via its default --ignore-path)
+supabase/.temp/
+supabase/.branches/
+
 # vercel
 .vercel
 

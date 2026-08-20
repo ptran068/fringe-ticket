@@ -7,10 +7,6 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    env:
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
     steps:
       - uses: actions/checkout@v4
 
@@ -21,19 +17,30 @@ jobs:
 
       - run: npm ci
 
-      - name: Write .env.local from secrets
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # GitHub-hosted runners have Docker. Local machines can keep using
+      # hosted Supabase via .env.local; CI always uses this ephemeral stack.
+      - run: supabase start
+        env:
+          SUPABASE_INTERNAL_IMAGE_REGISTRY: docker.io
+
+      - name: Point verify at the local stack
         run: |
-          if [ -z "$NEXT_PUBLIC_SUPABASE_URL" ] || [ -z "$NEXT_PUBLIC_SUPABASE_ANON_KEY" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
-            echo "Add GitHub Actions secrets (same values as .env.local):"
-            echo "  NEXT_PUBLIC_SUPABASE_URL"
-            echo "  NEXT_PUBLIC_SUPABASE_ANON_KEY"
-            echo "  SUPABASE_SERVICE_ROLE_KEY"
+          eval "$(supabase status -o env)"
+          URL="${API_URL:-}"
+          ANON="${ANON_KEY:-}"
+          SERVICE="${SERVICE_ROLE_KEY:-}"
+          if [ -z "$URL" ] || [ -z "$ANON" ] || [ -z "$SERVICE" ]; then
+            echo "supabase status -o env did not set API_URL / ANON_KEY / SERVICE_ROLE_KEY"
             exit 1
           fi
           {
-            echo "NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}"
-            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}"
-            echo "SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}"
-          } > .env.local
+            echo "NEXT_PUBLIC_SUPABASE_URL=${URL}"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=${ANON}"
+            echo "SUPABASE_SERVICE_ROLE_KEY=${SERVICE}"
+          } | tee .env.local >> "$GITHUB_ENV"
 
       - run: npm run verify
