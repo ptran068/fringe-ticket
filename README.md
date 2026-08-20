@@ -56,7 +56,7 @@ npm run integrity    # Oversell, expiry, timezone, RLS
 npm run verify       # lint + types + format + test + integrity
 ```
 
-CI runs `npm run verify` after `supabase start`. Do not delete `scripts/integrity-guard.ts` to go green.
+CI runs `npm run verify` against the hosted project (GitHub secrets, same keys as `.env.local`). Do not delete `scripts/integrity-guard.ts` to go green.
 
 ## Layout
 
