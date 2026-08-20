@@ -7,6 +7,7 @@ interface CountdownProps {
   expiresAt: string;
   onExpire?: () => void;
   className?: string;
+  size?: 'lg' | 'sm';
 }
 
 /**
@@ -14,7 +15,7 @@ interface CountdownProps {
  * Calculates remaining time client-side from the fixed expires_at.
  * Does NOT poll the database — uses the immutable DB timestamp as source of truth.
  */
-export function Countdown({ expiresAt, onExpire, className = '' }: CountdownProps) {
+export function Countdown({ expiresAt, onExpire, className = '', size = 'lg' }: CountdownProps) {
   const [remaining, setRemaining] = useState(() => {
     return new Date(expiresAt).getTime() - Date.now();
   });
@@ -56,15 +57,27 @@ export function Countdown({ expiresAt, onExpire, className = '' }: CountdownProp
     );
   }
 
-  const [minutes, seconds] = formatCountdown(remaining).split(':');
+  const clock = formatCountdown(remaining);
+
+  if (size === 'sm') {
+    return (
+      <span
+        className={`font-mono text-sm font-bold tabular-nums tracking-wide ${
+          isUrgent ? 'text-coral' : 'text-amber-dark'
+        } ${className}`}
+        role="timer"
+        aria-live="polite"
+        aria-label={`${clock} remaining`}
+      >
+        {clock}
+      </span>
+    );
+  }
+
+  const [minutes, seconds] = clock.split(':');
 
   return (
-    <div
-      className={className}
-      role="timer"
-      aria-live="polite"
-      aria-label={`${formatCountdown(remaining)} remaining`}
-    >
+    <div className={className} role="timer" aria-live="polite" aria-label={`${clock} remaining`}>
       <div className="flex items-end justify-center gap-2">
         <TimeBlock value={minutes} label="min" urgent={isUrgent} />
         <span

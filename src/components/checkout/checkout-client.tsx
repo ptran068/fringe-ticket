@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition, useCallback } from 'react';
+import { useEffect, useState, useTransition, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Countdown } from '@/components/ui/countdown';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import { formatPrice } from '@/domain/pricing';
 import { formatShowTime } from '@/domain/time';
 import { confirmHold } from '@/server/actions/holds';
 import { IconClock, IconPin, IconTicket } from '@/components/ui/icons';
+import { clearPendingHold, savePendingHold } from '@/lib/pending-hold';
 import Link from 'next/link';
 
 interface CheckoutClientProps {
@@ -58,9 +59,33 @@ export function CheckoutClient({ hold }: CheckoutClientProps) {
   const show = hold.shows;
   const venue = show.venues;
 
+  useEffect(() => {
+    if (expired || hold.status !== 'active') {
+      clearPendingHold(hold.id);
+      return;
+    }
+
+    savePendingHold({
+      holdId: hold.id,
+      expiresAt: hold.expires_at,
+      showId: show.id,
+      showTitle: show.title,
+      venueName: venue.name,
+      venueCity: venue.city,
+      timezone: venue.timezone,
+      startsAt: show.starts_at,
+      items: hold.hold_items.map((item) => ({
+        label: item.ticket_tiers.label,
+        quantity: item.quantity,
+      })),
+      totalMinor: total,
+    });
+  }, [expired, hold, show, venue, total]);
+
   const handleExpire = useCallback(() => {
+    clearPendingHold(hold.id);
     setExpired(true);
-  }, []);
+  }, [hold.id]);
 
   const handleConfirm = () => {
     startTransition(async () => {
@@ -68,6 +93,7 @@ export function CheckoutClient({ hold }: CheckoutClientProps) {
 
       if (!result.success) {
         if (result.error === 'HOLD_EXPIRED') {
+          clearPendingHold(hold.id);
           setExpired(true);
           setError(null);
         } else {
@@ -76,6 +102,7 @@ export function CheckoutClient({ hold }: CheckoutClientProps) {
         return;
       }
 
+      clearPendingHold(hold.id);
       router.push(`/booking/${result.booking_id}`);
     });
   };
@@ -115,6 +142,9 @@ export function CheckoutClient({ hold }: CheckoutClientProps) {
         </div>
         <h1 className="font-display text-3xl font-bold text-charcoal">Tickets reserved</h1>
         <p className="mt-2 text-sm text-slate">Complete your booking before the timer runs out.</p>
+        <p className="mt-1 text-xs text-slate-light">
+          Need to step away? Resume from My Tickets before time runs out.
+        </p>
       </div>
 
       <div className="ticket-notch mb-6 overflow-hidden rounded-2xl border border-charcoal/8 bg-white p-6 text-center shadow-card">

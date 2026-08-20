@@ -20,6 +20,12 @@ import {
   subscribeWallet,
   type WalletTicket,
 } from '@/lib/ticket-wallet';
+import {
+  getPendingHoldSnapshot,
+  getServerPendingHoldSnapshot,
+  subscribePendingHold,
+} from '@/lib/pending-hold';
+import { PendingHoldCard } from '@/components/tickets/pending-hold-card';
 
 function TicketIcon() {
   return (
@@ -100,6 +106,11 @@ export function TicketWallet() {
     getServerHydrationSnapshot,
   );
   const tickets = useSyncExternalStore(subscribeWallet, getWalletSnapshot, getServerWalletSnapshot);
+  const pending = useSyncExternalStore(
+    subscribePendingHold,
+    getPendingHoldSnapshot,
+    getServerPendingHoldSnapshot,
+  );
 
   const handleRemove = (bookingId: string) => {
     removeWalletTicket(bookingId);
@@ -114,7 +125,7 @@ export function TicketWallet() {
     );
   }
 
-  if (tickets.length === 0) {
+  if (tickets.length === 0 && !pending) {
     return (
       <EmptyState
         icon={<TicketIcon />}
@@ -137,6 +148,14 @@ export function TicketWallet() {
 
   return (
     <div className="space-y-8">
+      {pending && (
+        <section className="space-y-4">
+          <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate">
+            Finish booking
+          </h2>
+          <PendingHoldCard hold={pending} />
+        </section>
+      )}
       {upcoming.length > 0 && (
         <section className="space-y-4">
           <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate">Upcoming</h2>

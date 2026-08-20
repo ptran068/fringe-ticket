@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/alert';
 import { formatPrice, tierPrice, calculateOrder } from '@/domain/pricing';
 import { createHold } from '@/server/actions/holds';
+import { savePendingHold } from '@/lib/pending-hold';
 import type { Show, ShowAvailability, TicketTier } from '@/types/domain';
 
 interface TicketSelectorProps {
@@ -61,6 +62,27 @@ export function TicketSelector({ show, availability, tiers }: TicketSelectorProp
         }
         return;
       }
+
+      if (!result.hold_id || !result.expires_at) {
+        setError('Something went wrong. Please try again.');
+        return;
+      }
+
+      savePendingHold({
+        holdId: result.hold_id,
+        expiresAt: result.expires_at,
+        showId: show.id,
+        showTitle: show.title,
+        venueName: show.venues.name,
+        venueCity: show.venues.city,
+        timezone: show.venues.timezone,
+        startsAt: show.starts_at,
+        items: order.lineItems.map((item) => ({
+          label: item.tierLabel,
+          quantity: item.quantity,
+        })),
+        totalMinor: order.totalMinor,
+      });
 
       router.push(`/checkout/${result.hold_id}`);
     });

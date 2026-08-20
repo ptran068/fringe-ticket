@@ -1,10 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { PendingHoldBanner } from '@/components/checkout/pending-hold-banner';
 import { SignOutButton } from '@/components/organiser/sign-out-button';
 import { IconClose, IconMenu } from '@/components/ui/icons';
+import {
+  checkoutPath,
+  getPendingHoldSnapshot,
+  getServerPendingHoldSnapshot,
+  subscribePendingHold,
+} from '@/lib/pending-hold';
 
 interface SiteHeaderProps {
   signedIn: boolean;
@@ -30,6 +37,13 @@ export function SiteHeader({ signedIn }: SiteHeaderProps) {
 
 function HeaderBar({ signedIn, pathname }: { signedIn: boolean; pathname: string }) {
   const [open, setOpen] = useState(false);
+  const pending = useSyncExternalStore(
+    subscribePendingHold,
+    getPendingHoldSnapshot,
+    getServerPendingHoldSnapshot,
+  );
+  const onPendingCheckout = pending ? pathname === checkoutPath(pending.holdId) : false;
+  const showBanner = Boolean(pending) && !onPendingCheckout && !pathname.startsWith('/tickets');
 
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : '';
@@ -69,7 +83,12 @@ function HeaderBar({ signedIn, pathname }: { signedIn: boolean; pathname: string
 
         <nav className="hidden items-center gap-1 md:flex" aria-label="Primary">
           {NAV.map((item) => (
-            <NavLink key={item.href} href={item.href} active={item.match(pathname)}>
+            <NavLink
+              key={item.href}
+              href={item.href}
+              active={item.match(pathname)}
+              pending={item.href === '/tickets' && Boolean(pending)}
+            >
               {item.label}
             </NavLink>
           ))}
@@ -101,6 +120,8 @@ function HeaderBar({ signedIn, pathname }: { signedIn: boolean; pathname: string
         </button>
       </div>
 
+      {showBanner && pending && <PendingHoldBanner hold={pending} />}
+
       {open && (
         <div id="mobile-nav" className="border-t border-charcoal/8 bg-cream/95 px-4 py-4 md:hidden">
           <nav className="flex flex-col gap-1" aria-label="Mobile">
@@ -109,6 +130,7 @@ function HeaderBar({ signedIn, pathname }: { signedIn: boolean; pathname: string
                 key={item.href}
                 href={item.href}
                 active={item.match(pathname)}
+                pending={item.href === '/tickets' && Boolean(pending)}
                 mobile
                 onNavigate={close}
               >
@@ -146,26 +168,39 @@ function NavLink({
   active,
   children,
   mobile = false,
+  pending = false,
   onNavigate,
 }: {
   href: string;
   active: boolean;
   children: React.ReactNode;
   mobile?: boolean;
+  pending?: boolean;
   onNavigate?: () => void;
 }) {
   return (
     <Link
       href={href}
       aria-current={active ? 'page' : undefined}
+      aria-label={pending ? `${String(children)}, pending booking` : undefined}
       onClick={onNavigate}
-      className={`rounded-full px-3.5 py-2 text-sm font-medium transition-colors ${
+      className={`relative rounded-full px-3.5 py-2 text-sm font-medium transition-colors ${
         mobile ? 'w-full' : ''
       } ${
         active ? 'bg-charcoal text-white' : 'text-slate hover:bg-charcoal/5 hover:text-charcoal'
       }`}
     >
-      {children}
+      <span className="inline-flex items-center gap-2">
+        {children}
+        {pending && (
+          <span
+            className={`h-2 w-2 shrink-0 rounded-full animate-pulse-slow ${
+              active ? 'bg-amber-light' : 'bg-amber'
+            }`}
+            aria-hidden="true"
+          />
+        )}
+      </span>
     </Link>
   );
 }
