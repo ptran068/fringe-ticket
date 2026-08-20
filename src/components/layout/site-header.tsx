@@ -4,6 +4,7 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { PendingHoldBanner } from '@/components/checkout/pending-hold-banner';
+import { PendingHoldNavCta } from '@/components/checkout/pending-hold-nav-cta';
 import { SignOutButton } from '@/components/organiser/sign-out-button';
 import { IconClose, IconMenu } from '@/components/ui/icons';
 import {
@@ -83,15 +84,11 @@ function HeaderBar({ signedIn, pathname }: { signedIn: boolean; pathname: string
 
         <nav className="hidden items-center gap-1 md:flex" aria-label="Primary">
           {NAV.map((item) => (
-            <NavLink
-              key={item.href}
-              href={item.href}
-              active={item.match(pathname)}
-              pending={item.href === '/tickets' && Boolean(pending)}
-            >
+            <NavLink key={item.href} href={item.href} active={item.match(pathname)}>
               {item.label}
             </NavLink>
           ))}
+          {pending && !onPendingCheckout && <PendingHoldNavCta hold={pending} />}
           {signedIn ? (
             <>
               <NavLink href="/organiser" active={organiserActive}>
@@ -108,16 +105,19 @@ function HeaderBar({ signedIn, pathname }: { signedIn: boolean; pathname: string
           )}
         </nav>
 
-        <button
-          type="button"
-          className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-charcoal hover:bg-charcoal/5 md:hidden"
-          aria-expanded={open}
-          aria-controls="mobile-nav"
-          onClick={() => setOpen((value) => !value)}
-        >
-          <span className="sr-only">{open ? 'Close menu' : 'Open menu'}</span>
-          {open ? <IconClose className="h-5 w-5" /> : <IconMenu className="h-5 w-5" />}
-        </button>
+        <div className="flex items-center gap-2 md:hidden">
+          {pending && !onPendingCheckout && <PendingHoldNavCta hold={pending} compact />}
+          <button
+            type="button"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-charcoal hover:bg-charcoal/5"
+            aria-expanded={open}
+            aria-controls="mobile-nav"
+            onClick={() => setOpen((value) => !value)}
+          >
+            <span className="sr-only">{open ? 'Close menu' : 'Open menu'}</span>
+            {open ? <IconClose className="h-5 w-5" /> : <IconMenu className="h-5 w-5" />}
+          </button>
+        </div>
       </div>
 
       {showBanner && pending && <PendingHoldBanner hold={pending} />}
@@ -130,7 +130,6 @@ function HeaderBar({ signedIn, pathname }: { signedIn: boolean; pathname: string
                 key={item.href}
                 href={item.href}
                 active={item.match(pathname)}
-                pending={item.href === '/tickets' && Boolean(pending)}
                 mobile
                 onNavigate={close}
               >
@@ -168,39 +167,26 @@ function NavLink({
   active,
   children,
   mobile = false,
-  pending = false,
   onNavigate,
 }: {
   href: string;
   active: boolean;
   children: React.ReactNode;
   mobile?: boolean;
-  pending?: boolean;
   onNavigate?: () => void;
 }) {
   return (
     <Link
       href={href}
       aria-current={active ? 'page' : undefined}
-      aria-label={pending ? `${String(children)}, pending booking` : undefined}
       onClick={onNavigate}
-      className={`relative rounded-full px-3.5 py-2 text-sm font-medium transition-colors ${
+      className={`rounded-full px-3.5 py-2 text-sm font-medium transition-colors ${
         mobile ? 'w-full' : ''
       } ${
         active ? 'bg-charcoal text-white' : 'text-slate hover:bg-charcoal/5 hover:text-charcoal'
       }`}
     >
-      <span className="inline-flex items-center gap-2">
-        {children}
-        {pending && (
-          <span
-            className={`h-2 w-2 shrink-0 rounded-full animate-pulse-slow ${
-              active ? 'bg-amber-light' : 'bg-amber'
-            }`}
-            aria-hidden="true"
-          />
-        )}
-      </span>
+      {children}
     </Link>
   );
 }
